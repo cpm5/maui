@@ -622,7 +622,7 @@ void StartVisualStudioForDotNet()
     {
         if (IsRunningOnWindows())
         {
-            sln = "./Microsoft.Maui.sln";
+            sln = "./Microsoft.Maui-windows.slnf";
         }
         else
         {
