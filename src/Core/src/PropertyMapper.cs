@@ -1,6 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.Maui.Handlers;
+
+#if IOS || MACCATALYST
+using PlatformView = UIKit.UIView;
+#elif ANDROID
+using PlatformView = Android.Views.View;
+#elif WINDOWS
+using PlatformView = Microsoft.UI.Xaml.FrameworkElement;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID)
+using PlatformView = System.Object;
+#endif
 
 namespace Microsoft.Maui
 {
@@ -31,6 +40,9 @@ namespace Microsoft.Maui
 
 		protected virtual void UpdatePropertyCore(string key, IElementHandler viewHandler, IElement virtualView)
 		{
+			if (!viewHandler.CanInvokeMappers())
+				return;
+
 			var action = GetProperty(key);
 			action?.Invoke(viewHandler, virtualView);
 		}

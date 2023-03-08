@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 
@@ -25,6 +26,14 @@ namespace Maui.Controls.Sample.Pages
 		{
 			MauiWebView.Navigating -= OnMauiWebViewNavigating;
 			MauiWebView.Navigated -= OnMauiWebViewNavigated;
+		}
+
+		void OnUpdateHtmlSourceClicked(object sender, EventArgs args)
+		{
+			Random rnd = new();
+			HtmlWebViewSource htmlWebViewSource = new();
+			HtmlSourceWebView.Source = htmlWebViewSource;
+			htmlWebViewSource.Html += $"<h1>Updated Content {rnd.Next()}!</h1><br>";
 		}
 
 		void OnGoBackClicked(object sender, EventArgs args)
@@ -82,6 +91,12 @@ namespace Maui.Controls.Sample.Pages
 			await LoadMauiAsset();
 		}
 
+		async void OnSetUserAgentClicked(object sender, EventArgs e)
+		{
+			input.Text = "useragent.html";
+			await LoadMauiAsset();
+		}
+
 		async Task LoadMauiAsset()
 		{
 			using var stream = await FileSystem.OpenAppPackageFileAsync(input.Text.Trim());
@@ -89,6 +104,21 @@ namespace Maui.Controls.Sample.Pages
 
 			var html = reader.ReadToEnd();
 			FileWebView.Source = new HtmlWebViewSource { Html = html };
+		}
+
+		void OnAllowMixedContentClicked(object sender, EventArgs e)
+		{
+			MauiWebView.On<Microsoft.Maui.Controls.PlatformConfiguration.Android>().SetMixedContentMode(MixedContentHandling.AlwaysAllow);
+		}
+
+		void OnEnableZoomControlsClicked(object sender, EventArgs e)
+		{
+			MauiWebView.On<Microsoft.Maui.Controls.PlatformConfiguration.Android>().EnableZoomControls(true);
+		}
+
+		void OnLoadHtml5VideoClicked(object sender, EventArgs e)
+		{
+			MauiWebView.Source = new UrlWebViewSource { Url = "video.html" };
 		}
 	}
 }

@@ -22,6 +22,8 @@ namespace Microsoft.Maui.Devices
 
 		void Toggle(bool on)
 		{
+#pragma warning disable CA1416 // https://github.com/xamarin/xamarin-macios/issues/14619
+#pragma warning disable CA1422 // Validate platform compatibility
 			var captureDevice = AVCaptureDevice.GetDefaultDevice(AVMediaTypes.Video);
 			if (captureDevice == null || !(captureDevice.HasFlash || captureDevice.HasTorch))
 				throw new FeatureNotSupportedException();
@@ -47,6 +49,9 @@ namespace Microsoft.Maui.Devices
 			}
 
 			captureDevice.UnlockForConfiguration();
+
+#pragma warning restore CA1422 // Validate platform compatibility
+#pragma warning restore CA1416
 			captureDevice.Dispose();
 			captureDevice = null;
 		}

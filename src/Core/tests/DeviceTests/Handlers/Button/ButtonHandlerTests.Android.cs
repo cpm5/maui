@@ -1,19 +1,56 @@
+﻿using System;
 using System.Threading.Tasks;
 using Android.Text;
 using AndroidX.AppCompat.Widget;
 using AndroidX.Core.Widget;
-using Google.Android.Material.Button;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.DeviceTests.Stubs;
-using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Handlers;
 using Xunit;
-using AColor = global::Android.Graphics.Color;
+using AColor = Android.Graphics.Color;
 
 namespace Microsoft.Maui.DeviceTests
 {
 	public partial class ButtonHandlerTests
 	{
+		[Fact(DisplayName = "IsVisible updates Correctly")]
+		public async Task IsVisibleUpdatesCorrectly()
+		{
+			var expected = Colors.Red;
+
+			var layout = new LayoutStub();
+
+			var hiddenButton = new ButtonStub
+			{
+				Text = "Text",
+				TextColor = expected,
+				Visibility = Visibility.Collapsed,
+			};
+
+			var button = new ButtonStub
+			{
+				Text = "Change IsVisible"
+			};
+
+			layout.Add(hiddenButton);
+			layout.Add(button);
+
+			var clicked = false;
+
+			button.Clicked += delegate
+			{
+				hiddenButton.Visibility = Visibility.Visible;
+				clicked = true;
+			};
+
+			await PerformClick(button);
+
+			Assert.True(clicked);
+
+			var result = await GetValueAsync(hiddenButton, GetVisibility);
+			Assert.Equal(hiddenButton.Visibility, result);
+
+			await ValidateHasColor(hiddenButton, expected);
+		}
+
 		[Fact(DisplayName = "CharacterSpacing Initializes Correctly")]
 		public async Task CharacterSpacingInitializesCorrectly()
 		{
@@ -40,8 +77,33 @@ namespace Microsoft.Maui.DeviceTests
 			Assert.Equal(expectedValue, values.PlatformViewValue, EmCoefficientPrecision);
 		}
 
+		[Theory]
+		[InlineData("red.png", "#FF0000")]
+		[InlineData("green.png", "#00FF00")]
+		public async Task ImageSourceUpdatesCorrectly(string filename, string colorHex)
+		{
+			var image = new ButtonStub
+			{
+				ImageSource = new FileImageSourceStub("black.png"),
+			};
+
+			// Update the Button Icon
+			image.ImageSource = new FileImageSourceStub(filename);
+
+			await InvokeOnMainThreadAsync(async () =>
+			{
+				var handler = CreateHandler(image);
+
+				bool imageLoaded = await Wait(() => ImageSourceLoaded(handler));
+
+				Assert.True(imageLoaded);
+				var expectedColor = Color.FromArgb(colorHex);
+				await handler.PlatformView.AssertContainsColor(expectedColor);
+			});
+		}
+
 		AppCompatButton GetNativeButton(ButtonHandler buttonHandler) =>
-			(AppCompatButton)buttonHandler.PlatformView;
+			buttonHandler.PlatformView;
 
 		string GetNativeText(ButtonHandler buttonHandler) =>
 			GetNativeButton(buttonHandler).Text;

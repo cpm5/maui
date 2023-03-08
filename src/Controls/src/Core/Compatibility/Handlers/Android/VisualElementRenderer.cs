@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.ComponentModel;
 using Android.Content;
 using Microsoft.Maui.Controls.Platform;
@@ -12,7 +11,10 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 	public abstract partial class VisualElementRenderer<TElement> : AViewGroup, IPlatformViewHandler
 		where TElement : Element, IView
 	{
-		object? IElementHandler.PlatformView => ChildCount > 0 ? GetChildAt(0) : null;
+		object? IElementHandler.PlatformView
+		{
+			get => ChildCount > 0 ? GetChildAt(0) : this;
+		}
 
 		static partial void ProcessAutoPackage(Maui.IElement element)
 		{

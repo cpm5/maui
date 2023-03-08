@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using Android.Animation;
 using Android.Graphics;
@@ -60,7 +61,9 @@ namespace Microsoft.Maui.Controls.Platform
 
 			var paint = new Paint
 			{
+#pragma warning disable CA1416 // https://github.com/xamarin/xamarin-android/issues/6962
 				Color = _endColor
+#pragma warning restore CA1416
 			};
 
 			canvas.DrawCircle(centerX, centerY, radius * _progress, paint);

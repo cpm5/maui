@@ -20,17 +20,17 @@ namespace Microsoft.Maui.Controls.Platform
 		{
 			var platformWindow = window?.MauiContext.GetPlatformWindow();
 
-			if (Subscriptions.Any(s => s.Window == platformWindow))
+			if (Subscriptions.Any(s => s.PlatformView == platformWindow))
 				return;
 
-			Subscriptions.Add(new AlertRequestHelper(platformWindow));
+			Subscriptions.Add(new AlertRequestHelper(window, platformWindow));
 		}
 
 		internal void Unsubscribe(Window window)
 		{
 			var platformWindow = window?.MauiContext.GetPlatformWindow();
 
-			var toRemove = Subscriptions.Where(s => s.Window == platformWindow).ToList();
+			var toRemove = Subscriptions.Where(s => s.PlatformView == platformWindow).ToList();
 
 			foreach (AlertRequestHelper alertRequestHelper in toRemove)
 			{
@@ -45,30 +45,39 @@ namespace Microsoft.Maui.Controls.Platform
 
 			int _busyCount;
 
-			internal AlertRequestHelper(UIWindow window)
+			internal AlertRequestHelper(Window virtualView, UIWindow platformView)
 			{
-				Window = window;
+				VirtualView = virtualView;
+				PlatformView = platformView;
 
-				MessagingCenter.Subscribe<Page, bool>(Window, Page.BusySetSignalName, OnPageBusy);
-				MessagingCenter.Subscribe<Page, AlertArguments>(Window, Page.AlertSignalName, OnAlertRequested);
-				MessagingCenter.Subscribe<Page, PromptArguments>(Window, Page.PromptSignalName, OnPromptRequested);
-				MessagingCenter.Subscribe<Page, ActionSheetArguments>(Window, Page.ActionSheetSignalName, OnActionSheetRequested);
+#pragma warning disable CS0618 // TODO: Remove when we internalize/replace MessagingCenter
+				MessagingCenter.Subscribe<Page, bool>(PlatformView, Page.BusySetSignalName, OnPageBusy);
+				MessagingCenter.Subscribe<Page, AlertArguments>(PlatformView, Page.AlertSignalName, OnAlertRequested);
+				MessagingCenter.Subscribe<Page, PromptArguments>(PlatformView, Page.PromptSignalName, OnPromptRequested);
+				MessagingCenter.Subscribe<Page, ActionSheetArguments>(PlatformView, Page.ActionSheetSignalName, OnActionSheetRequested);
+#pragma warning restore CS0618 // Type or member is obsolete
 			}
 
-			public UIWindow Window { get; }
+			public Window VirtualView { get; }
+
+			public UIWindow PlatformView { get; }
 
 			public void Dispose()
 			{
-				MessagingCenter.Unsubscribe<Page, bool>(Window, Page.BusySetSignalName);
-				MessagingCenter.Unsubscribe<Page, AlertArguments>(Window, Page.AlertSignalName);
-				MessagingCenter.Unsubscribe<Page, PromptArguments>(Window, Page.PromptSignalName);
-				MessagingCenter.Unsubscribe<Page, ActionSheetArguments>(Window, Page.ActionSheetSignalName);
+#pragma warning disable CS0618 // TODO: Remove when we internalize/replace MessagingCenter
+				MessagingCenter.Unsubscribe<Page, bool>(PlatformView, Page.BusySetSignalName);
+				MessagingCenter.Unsubscribe<Page, AlertArguments>(PlatformView, Page.AlertSignalName);
+				MessagingCenter.Unsubscribe<Page, PromptArguments>(PlatformView, Page.PromptSignalName);
+				MessagingCenter.Unsubscribe<Page, ActionSheetArguments>(PlatformView, Page.ActionSheetSignalName);
+#pragma warning restore CS0618 // Type or member is obsolete
 			}
 
 			void OnPageBusy(IView sender, bool enabled)
 			{
 				_busyCount = Math.Max(0, enabled ? _busyCount + 1 : _busyCount - 1);
+#pragma warning disable CA1416, CA1422 // TODO:  'UIApplication.NetworkActivityIndicatorVisible' is unsupported on: 'ios' 13.0 and later
 				UIApplication.SharedApplication.NetworkActivityIndicatorVisible = _busyCount > 0;
+#pragma warning restore CA1416, CA1422
 			}
 
 			void OnAlertRequested(IView sender, AlertArguments arguments)
@@ -104,7 +113,7 @@ namespace Microsoft.Maui.Controls.Platform
 						_ => arguments.SetResult(true)));
 				}
 
-				PresentPopUp(Window, alert);
+				PresentPopUp(VirtualView, PlatformView, alert);
 			}
 
 			void PresentPrompt(PromptArguments arguments)
@@ -124,7 +133,7 @@ namespace Microsoft.Maui.Controls.Platform
 				alert.AddAction(UIAlertAction.Create(arguments.Cancel, UIAlertActionStyle.Cancel, _ => arguments.SetResult(null)));
 				alert.AddAction(UIAlertAction.Create(arguments.Accept, UIAlertActionStyle.Default, _ => arguments.SetResult(alert.TextFields[0].Text)));
 
-				PresentPopUp(Window, alert);
+				PresentPopUp(VirtualView, PlatformView, alert);
 			}
 
 
@@ -153,15 +162,16 @@ namespace Microsoft.Maui.Controls.Platform
 					alert.AddAction(UIAlertAction.Create(blabel, UIAlertActionStyle.Default, _ => arguments.SetResult(blabel)));
 				}
 
-				PresentPopUp(Window, alert, arguments);
+				PresentPopUp(VirtualView, PlatformView, alert, arguments);
 			}
-			static void PresentPopUp(UIWindow window, UIAlertController alert, ActionSheetArguments arguments = null)
+
+			static void PresentPopUp(Window virtualView, UIWindow platformView, UIAlertController alert, ActionSheetArguments arguments = null)
 			{
 				if (UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Pad && arguments != null)
 				{
 					UIDevice.CurrentDevice.BeginGeneratingDeviceOrientationNotifications();
 					var observer = NSNotificationCenter.DefaultCenter.AddObserver(UIDevice.OrientationDidChangeNotification,
-						n => { alert.PopoverPresentationController.SourceRect = window.RootViewController.View.Bounds; });
+						n => { alert.PopoverPresentationController.SourceRect = platformView.RootViewController.View.Bounds; });
 
 					arguments.Result.Task.ContinueWith(t =>
 					{
@@ -169,16 +179,32 @@ namespace Microsoft.Maui.Controls.Platform
 						UIDevice.CurrentDevice.EndGeneratingDeviceOrientationNotifications();
 					}, TaskScheduler.FromCurrentSynchronizationContext());
 
-					alert.PopoverPresentationController.SourceView = window.RootViewController.View;
-					alert.PopoverPresentationController.SourceRect = window.RootViewController.View.Bounds;
+					alert.PopoverPresentationController.SourceView = platformView.RootViewController.View;
+					alert.PopoverPresentationController.SourceRect = platformView.RootViewController.View.Bounds;
 					alert.PopoverPresentationController.PermittedArrowDirections = 0; // No arrow
 				}
 
-				window.BeginInvokeOnMainThread(() =>
-				{
-					_ = window.RootViewController.PresentViewControllerAsync(alert, true);
-				});
+				var modalStack = virtualView?.Navigation?.ModalStack;
 
+				if (modalStack != null && modalStack.Count > 0)
+				{
+					var topPage = modalStack[modalStack.Count - 1];
+					var pageController = topPage.ToUIViewController(topPage.FindMauiContext());
+
+					if (pageController != null)
+					{
+						platformView.BeginInvokeOnMainThread(() =>
+						{
+							pageController.PresentViewControllerAsync(alert, true);
+						});
+						return;
+					}
+				}
+
+				platformView.BeginInvokeOnMainThread(() =>
+				{
+					_ = platformView.RootViewController.PresentViewControllerAsync(alert, true);
+				});
 			}
 		}
 	}

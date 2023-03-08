@@ -5,8 +5,8 @@ using PlatformView = Google.Android.Material.AppBar.MaterialToolbar;
 #elif WINDOWS
 using PlatformView = Microsoft.Maui.Platform.MauiToolbar;
 #elif TIZEN
-using PlatformView =ElmSharp.Toolbar;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+using PlatformView = Microsoft.Maui.Platform.MauiToolbar;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 #endif
 
@@ -23,6 +23,16 @@ namespace Microsoft.Maui.Handlers
 		public static CommandMapper<IToolbar, IToolbarHandler> CommandMapper = new();
 
 		public ToolbarHandler() : base(Mapper, CommandMapper)
+		{
+		}
+
+		public ToolbarHandler(IPropertyMapper? mapper)
+			: base(mapper ?? Mapper, CommandMapper)
+		{
+		}
+
+		public ToolbarHandler(IPropertyMapper? mapper, CommandMapper? commandMapper)
+			: base(mapper ?? Mapper, commandMapper ?? CommandMapper)
 		{
 		}
 

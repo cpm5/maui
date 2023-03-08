@@ -2,12 +2,12 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Storage.Streams;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.Platform;
-using Microsoft.Extensions.Logging;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Storage.Streams;
 
 namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 {
@@ -59,7 +59,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 					await image.SetSourceAsync(stream);
 					return image;
 				}
-				catch (Exception ex) 
+				catch (Exception ex)
 				{
 					Application.Current?.FindMauiContext()?.CreateLogger<UriImageSourceHandler>()?.LogWarning(ex, "Could not load {uri}", imageLoader.Uri);
 

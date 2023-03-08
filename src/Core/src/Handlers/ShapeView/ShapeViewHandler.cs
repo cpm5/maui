@@ -6,7 +6,7 @@ using PlatformView = Microsoft.Maui.Platform.MauiShapeView;
 using PlatformView = Microsoft.Maui.Graphics.Win2D.W2DGraphicsView;
 #elif TIZEN
 using PlatformView = Microsoft.Maui.Platform.MauiShapeView;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 #endif
 
@@ -38,7 +38,13 @@ namespace Microsoft.Maui.Handlers
 		{
 		}
 
-		public ShapeViewHandler(IPropertyMapper mapper) : base(mapper ?? Mapper)
+		public ShapeViewHandler(IPropertyMapper? mapper)
+			: base(mapper ?? Mapper, CommandMapper)
+		{
+		}
+
+		public ShapeViewHandler(IPropertyMapper? mapper, CommandMapper? commandMapper)
+			: base(mapper ?? Mapper, commandMapper ?? CommandMapper)
 		{
 		}
 

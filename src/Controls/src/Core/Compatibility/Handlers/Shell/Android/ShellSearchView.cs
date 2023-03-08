@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
@@ -363,7 +364,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			}
 		}
 
-		class ClipDrawableWrapper : ASupportDrawable.DrawableWrapper
+		class ClipDrawableWrapper : ASupportDrawable.DrawableWrapperCompat
 		{
 			public ClipDrawableWrapper(Drawable dr) : base(dr)
 			{
@@ -374,6 +375,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 				base.Draw(canvas);
 
 				// Step 1: Clip out the top shadow that was drawn as it wont look right when lined up
+#pragma warning disable CA1416 // https://github.com/xamarin/xamarin-android/issues/6962
 				var paint = new Paint
 				{
 					Color = AColor.Black
@@ -388,6 +390,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 				{
 					Color = AColor.LightGray
 				};
+#pragma warning restore CA1416
 				canvas.DrawLine(0, 0, canvas.Width, 0, paint);
 			}
 		}

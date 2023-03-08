@@ -1,26 +1,27 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
+using System.Threading.Tasks;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.Platform;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Handlers;
 using Microsoft.UI.Xaml;
-using WVisibility = Microsoft.UI.Xaml.Visibility;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
-using Microsoft.Maui.Controls.Internals;
+using WASDKApp = Microsoft.UI.Xaml.Application;
 using WASDKDataTemplate = Microsoft.UI.Xaml.DataTemplate;
 using WASDKScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility;
-using WASDKApp = Microsoft.UI.Xaml.Application;
 using WRect = Windows.Foundation.Rect;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.Maui.Controls;
-using System.Threading.Tasks;
+using WVisibility = Microsoft.UI.Xaml.Visibility;
 
 namespace Microsoft.Maui.Controls.Handlers.Items
 {
-	public abstract partial class ItemsViewHandler<TItemsView> : ViewHandler<TItemsView, ListViewBase>  where TItemsView : ItemsView
+	public abstract partial class ItemsViewHandler<TItemsView> : ViewHandler<TItemsView, ListViewBase> where TItemsView : ItemsView
 	{
 		protected CollectionViewSource CollectionViewSource;
 		ScrollViewer _scrollViewer;
@@ -58,7 +59,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 			base.DisconnectHandler(platformView);
 		}
 
-		public static void MapItemsSource(ItemsViewHandler<TItemsView> handler, ItemsView itemsView) 
+		public static void MapItemsSource(ItemsViewHandler<TItemsView> handler, ItemsView itemsView)
 		{
 			handler.UpdateItemsSource();
 		}
@@ -100,7 +101,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		public static void MapItemsUpdatingScrollMode(ItemsViewHandler<TItemsView> handler, ItemsView itemsView)
 		{
-			
+
 		}
 
 		protected abstract ListViewBase SelectListViewBase();
@@ -122,6 +123,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 				CollectionViewSource.Source = null;
 				CollectionViewSource = null;
 			}
+			VirtualView?.ClearLogicalChildren();
 
 			if (VirtualView?.ItemsSource == null)
 			{

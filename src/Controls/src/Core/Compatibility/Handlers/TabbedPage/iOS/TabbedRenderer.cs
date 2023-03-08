@@ -1,8 +1,10 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.Platform;
 using Microsoft.Maui.Graphics;
@@ -25,6 +27,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		bool? _defaultBarTranslucent;
 		IMauiContext _mauiContext;
 		UITabBarAppearance _tabBarAppearance;
+		VisualElement _element;
 
 		IMauiContext MauiContext => _mauiContext;
 		public static IPropertyMapper<TabbedPage, TabbedRenderer> Mapper = new PropertyMapper<TabbedPage, TabbedRenderer>(TabbedViewHandler.ViewMapper);
@@ -54,7 +57,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			get { return (TabbedPage)Element; }
 		}
 
-		public VisualElement Element => _viewHandlerWrapper.Element;
+		public VisualElement Element => _viewHandlerWrapper.Element ?? _element;
 
 		public event EventHandler<VisualElementChangedEventArgs> ElementChanged;
 
@@ -69,6 +72,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		public void SetElement(VisualElement element)
 		{
 			_viewHandlerWrapper.SetVirtualView(element, OnElementChanged, false);
+			_element = element;
 
 			FinishedCustomizingViewControllers += HandleFinishedCustomizingViewControllers;
 			Tabbed.PropertyChanged += OnPropertyChanged;
@@ -91,6 +95,8 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			get { return this; }
 		}
 
+		[System.Runtime.Versioning.UnsupportedOSPlatform("ios8.0")]
+		[System.Runtime.Versioning.UnsupportedOSPlatform("tvos")]
 		public override void DidRotate(UIInterfaceOrientation fromInterfaceOrientation)
 		{
 			base.DidRotate(fromInterfaceOrientation);
@@ -125,9 +131,11 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				_tabBarAppearance?.Dispose();
 				_tabBarAppearance = null;
 
-				Page.SendDisappearing();
+				Page?.SendDisappearing();
+
 				Tabbed.PropertyChanged -= OnPropertyChanged;
 				Tabbed.PagesChanged -= OnPagesChanged;
+
 				FinishedCustomizingViewControllers -= HandleFinishedCustomizingViewControllers;
 			}
 
@@ -326,7 +334,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			if (!isDefaultColor)
 				_barBackgroundColorWasSet = true;
 
-			if (PlatformVersion.IsAtLeast(15))
+			if (OperatingSystem.IsIOSVersionAtLeast(15) || OperatingSystem.IsTvOSVersionAtLeast(15))
 				UpdateiOS15TabBarAppearance();
 			else
 				TabBar.BarTintColor = isDefaultColor ? _defaultBarColor : barBackgroundColor.ToPlatform();
@@ -378,7 +386,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			// set TintColor for selected icon
 			// setting the unselected icon tint is not supported by iOS
-			if (PlatformVersion.IsAtLeast(15))
+			if (OperatingSystem.IsIOSVersionAtLeast(15) || OperatingSystem.IsTvOSVersionAtLeast(15))
 				UpdateiOS15TabBarAppearance();
 			else
 				TabBar.TintColor = isDefaultColor ? _defaultBarTextColor : barTextColor.ToPlatform();
@@ -454,7 +462,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				TabBar.TintColor = UITabBar.Appearance.TintColor;
 			}
 
-			if (PlatformVersion.IsAtLeast(15))
+			if (OperatingSystem.IsIOSVersionAtLeast(15) || OperatingSystem.IsTvOSVersionAtLeast(15))
 				UpdateiOS15TabBarAppearance();
 			else
 			{
@@ -488,6 +496,8 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			return source.Task;
 		}
 
+		[System.Runtime.Versioning.SupportedOSPlatform("ios15.0")]
+		[System.Runtime.Versioning.SupportedOSPlatform("tvos15.0")]
 		void UpdateiOS15TabBarAppearance()
 		{
 			TabBar.UpdateiOS15TabBarAppearance(

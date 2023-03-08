@@ -5,8 +5,8 @@ using PlatformView = Microsoft.Maui.Platform.ContentViewGroup;
 #elif WINDOWS
 using PlatformView = Microsoft.Maui.Platform.ContentPanel;
 #elif TIZEN
-using PlatformView = Microsoft.Maui.Platform.ContentCanvas;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+using PlatformView = Microsoft.Maui.Platform.ContentViewGroup;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 #endif
 

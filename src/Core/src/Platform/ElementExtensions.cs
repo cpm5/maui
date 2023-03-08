@@ -16,11 +16,11 @@ using BasePlatformType = WinRT.IWinRTObject;
 using PlatformWindow = Microsoft.UI.Xaml.Window;
 using PlatformApplication = Microsoft.UI.Xaml.Application;
 #elif TIZEN
-using PlatformView = ElmSharp.EvasObject;
+using PlatformView = Tizen.NUI.BaseComponents.View;
 using BasePlatformType = System.Object;
-using PlatformWindow = ElmSharp.Window;
-using PlatformApplication = Tizen.Applications.CoreUIApplication;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+using PlatformWindow = Tizen.NUI.Window;
+using PlatformApplication = Tizen.Applications.CoreApplication;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 using BasePlatformType = System.Object;
 using IPlatformViewHandler = Microsoft.Maui.IViewHandler;
@@ -89,25 +89,14 @@ namespace Microsoft.Maui.Platform
 			}
 
 			if (handler == null)
-				throw new Exception($"Handler not found for view {view}.");
+				throw new HandlerNotFoundException(view);
 
 			handler.SetMauiContext(context);
 
-			try
-			{
-				view.Handler = handler;
+			view.Handler = handler;
 
-				if (handler.VirtualView != view)
-					handler.SetVirtualView(view);
-			}
-			catch (ToPlatformException)
-			{
-				throw;
-			}
-			catch (Exception exc)
-			{
-				throw new ToPlatformException($"{handler} found for {view} is incompatible", exc);
-			}
+			if (handler.VirtualView != view)
+				handler.SetVirtualView(view);
 
 			return handler;
 		}
@@ -176,7 +165,7 @@ namespace Microsoft.Maui.Platform
 		public static void SetWindowHandler(this PlatformWindow platformWindow, IWindow window, IMauiContext context) =>
 			SetHandler(platformWindow, window, context);
 
-#if WINDOWS || IOS || ANDROID
+#if WINDOWS || IOS || ANDROID || TIZEN
 		internal static IWindow GetWindow(this IElement element) =>
 			element.Handler?.MauiContext?.GetPlatformWindow()?.GetWindow() ??
 			throw new InvalidOperationException("IWindow not found");

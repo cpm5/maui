@@ -11,6 +11,50 @@ namespace Microsoft.Maui.DeviceTests
 {
 	public partial class SearchBarHandlerTests
 	{
+		[Theory(DisplayName = "Gradient Background Initializes Correctly")]
+
+		[InlineData(0xFFFF0000, 0xFFFE2500)]
+		[InlineData(0xFF00FF00, 0xFF04F800)]
+		[InlineData(0xFF0000FF, 0xFF0432FE)]
+		public async Task GradientBackgroundInitializesCorrectly(uint colorToSet, uint expectedColor)
+		{
+			var color = Color.FromUint(colorToSet);
+			var expected = Color.FromUint(expectedColor);
+
+			var brush = new LinearGradientPaintStub(Colors.Black, color);
+
+			var searchBar = new SearchBarStub
+			{
+				Background = brush,
+				Height = 71,
+				Width = 256,
+				Text = "Background"
+			};
+
+			await ValidateHasColor(searchBar, expected);
+		}
+
+		[Fact]
+		public async Task ShouldShowCancelButtonToggles()
+		{
+			var searchBarStub = new SearchBarStub();
+
+			await InvokeOnMainThreadAsync(() =>
+			{
+				var searchBar = CreateHandler(searchBarStub).PlatformView;
+
+				Assert.False(searchBar.ShowsCancelButton);
+
+				searchBarStub.Text = "additional text";
+				searchBarStub.Handler.UpdateValue(nameof(ISearchBar.Text));
+				Assert.True(searchBar.ShowsCancelButton);
+
+				searchBarStub.Text = "";
+				searchBarStub.Handler.UpdateValue(nameof(ISearchBar.Text));
+				Assert.False(searchBar.ShowsCancelButton);
+			});
+		}
+
 		[Fact(DisplayName = "Horizontal TextAlignment Updates Correctly")]
 		public async Task HorizontalTextAlignmentInitializesCorrectly()
 		{
@@ -86,6 +130,11 @@ namespace Microsoft.Maui.DeviceTests
 
 			Assert.Equal(xplatCharacterSpacing, values.ViewValue);
 			Assert.Equal(xplatCharacterSpacing, values.PlatformViewValue);
+		}
+
+		double GetInputFieldHeight(SearchBarHandler searchBarHandler)
+		{
+			return GetNativeSearchBar(searchBarHandler).Bounds.Height;
 		}
 
 		static UISearchBar GetNativeSearchBar(SearchBarHandler searchBarHandler) =>
@@ -170,16 +219,6 @@ namespace Microsoft.Maui.DeviceTests
 			var uiSearchBar = GetNativeSearchBar(searchBarHandler);
 
 			return !uiSearchBar.UserInteractionEnabled;
-		}
-
-		Task ValidateHasColor(ISearchBar searchBar, Color color, Action action = null)
-		{
-			return InvokeOnMainThreadAsync(() =>
-			{
-				var nativeSearchBar = GetNativeSearchBar(CreateHandler(searchBar));
-				action?.Invoke();
-				nativeSearchBar.AssertContainsColor(color);
-			});
 		}
 	}
 }

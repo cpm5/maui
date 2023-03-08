@@ -1,7 +1,7 @@
+using Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;
 using VisualElementSpecifics = Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific.VisualElement;
 
 namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
@@ -9,7 +9,8 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 	static class AccessKeyHelper
 	{
 
-		public static void UpdateAccessKey(FrameworkElement control, VisualElement element) {
+		public static void UpdateAccessKey(FrameworkElement control, VisualElement element)
+		{
 
 			if (control != null && element is IElementConfiguration<VisualElement> elementConfig)
 			{

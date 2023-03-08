@@ -12,7 +12,8 @@ using Rectangle = Microsoft.Maui.Controls.Compatibility.Shapes.Rectangle;
 [assembly: ExportImageSourceHandler(typeof(FontImageSource), typeof(FontImageSourceHandler))]
 [assembly: ExportRenderer(typeof(Page), typeof(PageRenderer))]
 #pragma warning disable CS0618 // Type or member is obsolete
-[assembly: ExportRenderer(typeof(CarouselPage), typeof(CarouselPageRenderer))][assembly: ExportRenderer(typeof(MasterDetailPage), typeof(MasterDetailPageRenderer))]
+[assembly: ExportRenderer(typeof(CarouselPage), typeof(CarouselPageRenderer))]
+[assembly: ExportRenderer(typeof(MasterDetailPage), typeof(MasterDetailPageRenderer))]
 #pragma warning restore CS0618 // Type or member is obsolete
 
 [assembly: ExportRenderer(typeof(FlyoutPage), typeof(FlyoutPageRenderer))]
@@ -32,7 +33,6 @@ using Rectangle = Microsoft.Maui.Controls.Compatibility.Shapes.Rectangle;
 [assembly: ExportRenderer(typeof(Entry), typeof(EntryRenderer))]
 [assembly: ExportRenderer(typeof(Frame), typeof(FrameRenderer))]
 [assembly: ExportRenderer(typeof(Image), typeof(ImageRenderer))]
-[assembly: ExportRenderer(typeof(OpenGLView), typeof(OpenGLViewRenderer))]
 [assembly: ExportRenderer(typeof(Picker), typeof(PickerRenderer))]
 [assembly: ExportRenderer(typeof(ProgressBar), typeof(ProgressBarRenderer))]
 [assembly: ExportRenderer(typeof(SearchBar), typeof(SearchBarRenderer))]

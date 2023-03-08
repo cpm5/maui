@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,7 +22,7 @@ namespace Microsoft.Maui.Controls.Platform
 					return pvh.ViewController;
 				}
 
-				return MauiContext.
+				return WindowMauiContext.
 						GetPlatformWindow()?
 						.RootViewController;
 			}
@@ -80,7 +78,7 @@ namespace Microsoft.Maui.Controls.Platform
 
 		async Task PresentModal(Page modal, bool animated)
 		{
-			modal.ToPlatform(MauiContext);
+			modal.ToPlatform(WindowMauiContext);
 			var wrapper = new ModalWrapper(modal.Handler as IPlatformViewHandler);
 
 			if (ModalStack.Count > 1)

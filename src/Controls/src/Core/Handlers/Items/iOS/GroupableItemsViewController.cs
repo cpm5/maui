@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using CoreGraphics;
 using Foundation;
@@ -172,7 +173,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 				return CGSize.Empty;
 			}
 
-			if (!PlatformVersion.IsAtLeast(11))
+			if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsTvOSVersionAtLeast(11)))
 			{
 				// iOS 10 crashes if we try to dequeue a cell for measurement
 				// so we'll use an alternate method

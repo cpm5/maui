@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -41,7 +42,7 @@ namespace Microsoft.Maui.Controls.Platform
 
 		void ToolbarItemChanged(ToolbarItem oldItem, ToolbarItem newItem)
 		{
-			if(oldItem != null)
+			if (oldItem != null)
 				oldItem.PropertyChanged -= ToolbarItemPropertyChanged;
 
 			// TODO MAUI

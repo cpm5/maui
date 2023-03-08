@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Versioning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 #if __IOS__ || MACCATALYST
@@ -24,14 +25,21 @@ namespace Microsoft.Maui.Handlers
 		public static CommandMapper<IApplication, ApplicationHandler> CommandMapper = new(ElementCommandMapper)
 		{
 			[TerminateCommandKey] = MapTerminate,
+#pragma warning disable CA1416 // TODO: should we propagate SupportedOSPlatform("ios13.0") here
 			[nameof(IApplication.OpenWindow)] = MapOpenWindow,
 			[nameof(IApplication.CloseWindow)] = MapCloseWindow,
+#pragma warning restore CA1416
 		};
 
 		ILogger<ApplicationHandler>? _logger;
 
 		public ApplicationHandler()
 			: base(Mapper, CommandMapper)
+		{
+		}
+
+		public ApplicationHandler(IPropertyMapper? mapper)
+			: base(mapper ?? Mapper, CommandMapper)
 		{
 		}
 
@@ -43,7 +51,7 @@ namespace Microsoft.Maui.Handlers
 		ILogger? Logger =>
 			_logger ??= MauiContext?.Services.CreateLogger<ApplicationHandler>();
 
-#if !NETSTANDARD
+#if !(NETSTANDARD || !PLATFORM)
 		protected override PlatformView CreatePlatformElement() =>
 			MauiContext?.Services.GetService<PlatformView>() ?? throw new InvalidOperationException($"MauiContext did not have a valid application.");
 #endif

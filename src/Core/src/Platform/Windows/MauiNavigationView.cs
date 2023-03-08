@@ -1,15 +1,15 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 using WBrush = Microsoft.UI.Xaml.Media.Brush;
 using WGridLength = Microsoft.UI.Xaml.GridLength;
-using WThickness = Microsoft.UI.Xaml.Thickness;
 using WRectangle = Microsoft.UI.Xaml.Shapes.Rectangle;
-using System.Collections.Generic;
-using Microsoft.UI.Xaml.Media;
-using System.Collections;
+using WThickness = Microsoft.UI.Xaml.Thickness;
 
 namespace Microsoft.Maui.Platform
 {
@@ -38,10 +38,35 @@ namespace Microsoft.Maui.Platform
 		internal RowDefinition? PaneContentGridToggleButtonRow { get; private set; }
 		internal RowDefinition? PaneHeaderContentBorderRow { get; private set; }
 
+		// The NavigationView occasionally likes to switch back to "LeftMinimal"
+		// So we use this to switch it back whenver that happens.
+		internal NavigationViewPaneDisplayMode? PinPaneDisplayModeTo
+		{
+			get => _pinPaneDisplayModeTo;
+			set
+			{
+				_pinPaneDisplayModeTo = value;
+				UpdateToPinnedDisplayMode();
+
+			}
+		}
+
 		public MauiNavigationView()
 		{
 			this.RegisterPropertyChangedCallback(MenuItemsSourceProperty, (_, __) => UpdateMenuItemsContainerHeight());
 			this.RegisterPropertyChangedCallback(MenuItemsProperty, (_, __) => UpdateMenuItemsContainerHeight());
+			RegisterPropertyChangedCallback(PaneDisplayModeProperty, PaneDisplayModeChanged);
+		}
+
+		void PaneDisplayModeChanged(DependencyObject sender, DependencyProperty dp) =>
+			UpdateToPinnedDisplayMode();
+
+		void UpdateToPinnedDisplayMode()
+		{
+			if (PinPaneDisplayModeTo != null && PinPaneDisplayModeTo.Value != this.PaneDisplayMode)
+			{
+				PaneDisplayMode = PinPaneDisplayModeTo.Value;
+			}
 		}
 
 		protected override void OnApplyTemplate()
@@ -51,8 +76,8 @@ namespace Microsoft.Maui.Platform
 			MenuItemsScrollViewer = (ScrollViewer)GetTemplateChild("MenuItemsScrollViewer");
 			PaneContentGrid = (Grid)GetTemplateChild("PaneContentGrid");
 			RootSplitView = (SplitView)GetTemplateChild("RootSplitView");
-			TopNavArea = ((StackPanel)GetTemplateChild("TopNavArea"));
-			TopNavMenuItemsHost = ((ItemsRepeater)GetTemplateChild("TopNavMenuItemsHost"));
+			TopNavArea = (StackPanel)GetTemplateChild("TopNavArea");
+			TopNavMenuItemsHost = (ItemsRepeater)GetTemplateChild("TopNavMenuItemsHost");
 			ContentPaneTopPadding = (Grid)GetTemplateChild("ContentPaneTopPadding");
 			PaneToggleButtonGrid = (Grid)GetTemplateChild("PaneToggleButtonGrid");
 			ButtonHolderGrid = (Grid)GetTemplateChild("ButtonHolderGrid");
@@ -68,7 +93,6 @@ namespace Microsoft.Maui.Platform
 			PaneHeaderContentBorderRow = (RowDefinition)GetTemplateChild("PaneHeaderContentBorderRow");
 
 			UpdateNavigationBackButtonSize();
-			UpdateNavigationViewContentMargin();
 			UpdateNavigationViewBackButtonMargin();
 			UpdateNavigationViewButtonHolderGridMargin();
 			OnApplyTemplateCore();
@@ -101,13 +125,10 @@ namespace Microsoft.Maui.Platform
 			PaneHeaderContentBorderRow.RegisterPropertyChangedCallback(RowDefinition.MinHeightProperty, (_, __) =>
 				PaneHeaderContentBorderRow.MinHeight = 0);
 
-
 			// WinUI has this set to -1,3,-1,3 but I'm not really sure why
 			// It causes the content to not be flush up against the title bar
-			PaneContentGrid.Margin = new WThickness(-1, 0, -1, 0);
+			PaneContentGrid.Margin = new WThickness(0, 0, 0, 0);
 			UpdateMenuItemsContainerHeight();
-
-
 		}
 
 
@@ -202,29 +223,6 @@ namespace Microsoft.Maui.Platform
 		{
 			if (ButtonHolderGrid != null)
 				ButtonHolderGrid.Margin = NavigationViewButtonHolderGridMargin;
-		}
-		#endregion
-
-		#region NavigationViewContentMargin
-		internal static readonly DependencyProperty NavigationViewContentMarginProperty
-			= DependencyProperty.Register(nameof(NavigationViewContentMargin), typeof(WThickness), typeof(MauiNavigationView),
-				new PropertyMetadata(new WThickness(), OnNavigationViewContentMarginChanged));
-
-		internal WThickness NavigationViewContentMargin
-		{
-			get => (WThickness)GetValue(NavigationViewContentMarginProperty);
-			set => SetValue(NavigationViewContentMarginProperty, value);
-		}
-
-		static void OnNavigationViewContentMarginChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		{
-			((MauiNavigationView)d).UpdateNavigationViewContentMargin();
-		}
-
-		void UpdateNavigationViewContentMargin()
-		{
-			if (ContentGrid != null)
-				ContentGrid.Margin = NavigationViewContentMargin;
 		}
 		#endregion
 
@@ -325,6 +323,7 @@ namespace Microsoft.Maui.Platform
 		internal static readonly DependencyProperty PaneToggleButtonWidthProperty
 			= DependencyProperty.Register(nameof(PaneToggleButtonWidth), typeof(double), typeof(MauiNavigationView),
 				new PropertyMetadata(DefaultPaneToggleButtonWidth, OnPaneToggleButtonSizeChanged));
+		private NavigationViewPaneDisplayMode? _pinPaneDisplayModeTo;
 
 		internal double PaneToggleButtonWidth
 		{

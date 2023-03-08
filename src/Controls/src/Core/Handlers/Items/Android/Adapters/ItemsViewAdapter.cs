@@ -1,10 +1,10 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using Android.Content;
 using Android.Widget;
 using AndroidX.RecyclerView.Widget;
 using Object = Java.Lang.Object;
 using ViewGroup = Android.Views.ViewGroup;
-
 
 namespace Microsoft.Maui.Controls.Handlers.Items
 {
@@ -43,11 +43,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		protected virtual void ItemsViewPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs property)
 		{
-			if (property.Is(Microsoft.Maui.Controls.ItemsView.ItemsSourceProperty))
-			{
-				UpdateItemsSource();
-			}
-			else if (property.Is(Microsoft.Maui.Controls.ItemsView.ItemTemplateProperty))
+			if (property.Is(Microsoft.Maui.Controls.ItemsView.ItemTemplateProperty))
 			{
 				UpdateUsingItemTemplate();
 			}
@@ -130,13 +126,6 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 		protected virtual void BindTemplatedItemViewHolder(TemplatedItemViewHolder templatedItemViewHolder, object context)
 		{
 			templatedItemViewHolder.Bind(context, ItemsView);
-		}
-
-		void UpdateItemsSource()
-		{
-			ItemsSource?.Dispose();
-
-			ItemsSource = CreateItemsSource();
 		}
 
 		void UpdateUsingItemTemplate()

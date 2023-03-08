@@ -71,14 +71,16 @@ namespace Microsoft.Maui.Layouts
 	}
 
 	[TypeConverter(typeof(Converters.FlexBasisTypeConverter))]
-	public struct FlexBasis
+	public struct FlexBasis : IEquatable<FlexBasis>
 	{
 		bool _isLength;
 		bool _isRelative;
-		public static FlexBasis Auto = new();
 		public float Length { get; }
 		internal bool IsAuto => !_isLength && !_isRelative;
 		internal bool IsRelative => _isRelative;
+
+		public static readonly FlexBasis Auto = new();
+
 		public FlexBasis(float length, bool isRelative = false)
 		{
 			if (length < 0)
@@ -91,8 +93,16 @@ namespace Microsoft.Maui.Layouts
 		}
 
 		public static implicit operator FlexBasis(float length)
-		{
-			return new FlexBasis(length);
-		}
+			=> new FlexBasis(length);
+
+		public bool Equals(FlexBasis other) => _isLength == other._isLength && _isRelative == other._isRelative && Length == other.Length;
+
+		public override bool Equals(object? obj) => obj is FlexBasis other && Equals(other);
+
+		public override int GetHashCode() => _isRelative.GetHashCode() ^ Length.GetHashCode();
+
+		public static bool operator ==(FlexBasis left, FlexBasis right) => left.Equals(right);
+
+		public static bool operator !=(FlexBasis left, FlexBasis right) => !(left == right);
 	}
 }

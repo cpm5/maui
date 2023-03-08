@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -76,13 +77,21 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			base.ViewDidLoad();
 
 			TableView.SeparatorStyle = UITableViewCellSeparatorStyle.None;
-			if (PlatformVersion.IsAtLeast(11))
+			if (OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11)
+#if TVOS
+				|| OperatingSystem.IsTvOSVersionAtLeast(11)
+#endif
+			)
+			{
 				TableView.ContentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentBehavior.Never;
+			}
 
 			TableView.Source = _source;
 			ShellFlyoutContentManager.ViewDidLoad();
 		}
 
+		[System.Runtime.Versioning.SupportedOSPlatform("ios11.0")]
+		[System.Runtime.Versioning.SupportedOSPlatform("tvos11.0")]
 		public override void ViewSafeAreaInsetsDidChange()
 		{
 			ShellFlyoutContentManager.SetHeaderContentInset();

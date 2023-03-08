@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using Android.Content;
 using Android.Views;
 using AndroidX.RecyclerView.Widget;
@@ -272,13 +273,15 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		int GetHeight(ViewGroup parent)
 		{
+			//this was using parent.MeasuredHeight on XF but that reports 0 now.
 			var headerFooterHeight = parent.Context.ToPixels(_headerHeight + _footerHeight);
-			return Math.Abs((int)(parent.MeasuredHeight - headerFooterHeight));
+			return Math.Abs((int)(parent.Height - headerFooterHeight));
 		}
 
 		int GetWidth(ViewGroup parent)
 		{
-			return parent.MeasuredWidth;
+			//this was using MeasuredWidth on XF but that reports 0 now.
+			return parent.Width;
 		}
 
 		void UpdateHeaderFooterHeight(object item, bool isHeader)

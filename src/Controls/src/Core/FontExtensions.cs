@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls.Internals;
 
@@ -30,7 +29,7 @@ namespace Microsoft.Maui.Controls
 		public static Font ToFont(this IFontElement element, double? defaultSize = null)
 		{
 			var size = element.FontSize;
-			if (defaultSize.HasValue && (size == 0 || size == double.NaN))
+			if (defaultSize.HasValue && (size <= 0 || double.IsNaN(size)))
 				size = defaultSize.Value;
 
 			return Font.OfSize(element.FontFamily, size, enableScaling: element.FontAutoScalingEnabled).WithAttributes(element.FontAttributes);

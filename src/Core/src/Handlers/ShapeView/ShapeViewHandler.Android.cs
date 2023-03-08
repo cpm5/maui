@@ -4,7 +4,7 @@ namespace Microsoft.Maui.Handlers
 {
 	public partial class ShapeViewHandler : ViewHandler<IShapeView, MauiShapeView>
 	{
-		protected override MauiShapeView CreatePlatformView() 
+		protected override MauiShapeView CreatePlatformView()
 			=> new MauiShapeView(Context);
 
 		public override bool NeedsContainer =>

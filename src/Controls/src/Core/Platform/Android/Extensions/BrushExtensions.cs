@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable disable
+using System;
+using System.Linq;
 using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.Graphics.Drawables.Shapes;
@@ -53,7 +55,9 @@ namespace Microsoft.Maui.Controls.Platform
 			if (brush is SolidColorBrush solidColorBrush)
 			{
 				var backgroundColor = solidColorBrush.Color;
+#pragma warning disable CA1416 // https://github.com/xamarin/xamarin-android/issues/6962
 				paint.Color = backgroundColor.ToPlatform();
+#pragma warning restore CA1416
 			}
 
 			if (brush is LinearGradientBrush linearGradientBrush)
@@ -254,7 +258,7 @@ namespace Microsoft.Maui.Controls.Platform
 			float[] offsets = new float[orderStops.Count];
 
 			int count = 0;
-			foreach (var orderStop in orderStops)
+			foreach (var orderStop in orderStops.OrderBy(s => s.Offset))
 			{
 				colors[count] = orderStop.Color.ToPlatform().ToArgb();
 				offsets[count] = orderStop.Offset;

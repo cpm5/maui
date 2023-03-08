@@ -1,3 +1,4 @@
+#nullable disable
 using System.Collections;
 
 namespace Microsoft.Maui.Controls.Platform
@@ -12,7 +13,7 @@ namespace Microsoft.Maui.Controls.Platform
 		readonly double _itemWidth;
 		readonly Thickness _itemSpacing;
 
-		public ItemTemplateContextEnumerable(IEnumerable itemsSource, DataTemplate formsDataTemplate, BindableObject container, 
+		public ItemTemplateContextEnumerable(IEnumerable itemsSource, DataTemplate formsDataTemplate, BindableObject container,
 			double? itemHeight = null, double? itemWidth = null, Thickness? itemSpacing = null, IMauiContext mauiContext = null)
 		{
 			_itemsSource = itemsSource;

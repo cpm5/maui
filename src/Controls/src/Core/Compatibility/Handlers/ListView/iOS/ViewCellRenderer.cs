@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.ComponentModel;
 using Microsoft.Maui.Controls.Compatibility;
@@ -70,7 +71,9 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			void UpdateIsEnabled(bool isEnabled)
 			{
 				UserInteractionEnabled = isEnabled;
+#pragma warning disable CA1416, CA1422 // TODO: TextLabel is unsupported on: 'ios' 14.0 and later
 				TextLabel.Enabled = isEnabled;
+#pragma warning restore C1416, CA1422
 			}
 
 			void ViewCellPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -96,17 +99,14 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 					ContentView.Bounds = new RectangleF(oldFrame.Location, new SizeF(oldFrame.Width, oldFrame.Height + 0.5f));
 				}
 
-				var contentFrame = ContentView.Frame;
-				var view = ViewCell.View;
-
-				view.Frame = new Graphics.Rect(0, 0, contentFrame.Width, contentFrame.Height);
-				view.Handler.PlatformArrangeHandler(contentFrame.ToRectangle());
 				if (_rendererRef == null)
 					return;
 
-				IPlatformViewHandler renderer;
-				if (_rendererRef.TryGetTarget(out renderer))
-					renderer.PlatformView.Frame = view.Bounds.ToCGRect();
+				if (_rendererRef.TryGetTarget(out IPlatformViewHandler handler))
+				{
+					var contentFrame = ContentView.Frame;
+					handler.LayoutVirtualView(new RectangleF(0, 0, contentFrame.Width, contentFrame.Height));
+				}
 
 				Performance.Stop(reference);
 			}
@@ -115,19 +115,20 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			{
 				Performance.Start(out string reference);
 
-				IPlatformViewHandler renderer;
-				if (!_rendererRef.TryGetTarget(out renderer))
+				if (!_rendererRef.TryGetTarget(out IPlatformViewHandler handler))
 					return base.SizeThatFits(size);
 
-				if (renderer.VirtualView == null)
+				if (handler.VirtualView == null)
 					return SizeF.Empty;
 
 				double width = size.Width;
 				var height = size.Height > 0 ? size.Height : double.PositiveInfinity;
-				var result = renderer.VirtualView.Measure(width, height);
+				var result = handler.MeasureVirtualView(new SizeF(width, height));
+				if (result == null)
+					return base.SizeThatFits(size);
 
 				// make sure to add in the separator if needed
-				var finalheight = (float)result.Height + (SupressSeparator ? 0f : 1f) / UIScreen.MainScreen.Scale;
+				var finalheight = (float)result.Value.Height + (SupressSeparator ? 0f : 1f) / UIScreen.MainScreen.Scale;
 
 				Performance.Stop(reference);
 

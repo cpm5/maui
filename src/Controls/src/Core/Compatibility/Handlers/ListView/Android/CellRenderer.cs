@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.ComponentModel;
 using Android.Content;
@@ -63,7 +64,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 					if (Cell != oldCell)
 					{
-						oldCell.Handler.DisconnectHandler();
+						oldCell.Handler?.DisconnectHandler();
 					}
 				}
 			}

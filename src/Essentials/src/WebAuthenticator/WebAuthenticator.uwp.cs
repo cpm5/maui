@@ -7,6 +7,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Storage;
 using Windows.Security.Authentication.Web;
 
 namespace Microsoft.Maui.Authentication
@@ -30,7 +31,7 @@ namespace Microsoft.Maui.Authentication
 					case WebAuthenticationStatus.Success:
 						// For GET requests this is a URI:
 						var resultUri = new Uri(r.ResponseData.ToString());
-						return new WebAuthenticatorResult(resultUri);
+						return new WebAuthenticatorResult(resultUri, webAuthenticatorOptions?.ResponseDecoder);
 					case WebAuthenticationStatus.UserCancel:
 						throw new TaskCanceledException();
 					case WebAuthenticationStatus.ErrorHttp:
@@ -47,7 +48,8 @@ namespace Microsoft.Maui.Authentication
 
 		static bool IsUriProtocolDeclared(string scheme)
 		{
-			var doc = XDocument.Load(PlatformUtils.AppManifestFilename, LoadOptions.None);
+			var docPath = FileSystemUtils.PlatformGetFullAppPackageFilePath(PlatformUtils.AppManifestFilename);
+			var doc = XDocument.Load(docPath, LoadOptions.None);
 			var reader = doc.CreateReader();
 			var namespaceManager = new XmlNamespaceManager(reader.NameTable);
 			namespaceManager.AddNamespace("x", PlatformUtils.AppManifestXmlns);

@@ -11,18 +11,22 @@ namespace Microsoft.Maui.Platform
 			platformCheckBox.IsChecked = check.IsChecked;
 		}
 
-		public static void UpdateForeground(this CheckBox platformCheckBox, ICheckBox check) 
+		public static void UpdateForeground(this CheckBox platformCheckBox, ICheckBox check)
 		{
 			var tintBrush = check.Foreground?.ToPlatform();
 
 			if (tintBrush == null)
 			{
 				platformCheckBox.Resources.RemoveKeys(_tintColorResourceKeys);
+				platformCheckBox.Foreground = null;
 			}
 			else
 			{
 				platformCheckBox.Resources.SetValueForAllKey(_tintColorResourceKeys, tintBrush);
+				platformCheckBox.Foreground = tintBrush;
 			}
+
+			platformCheckBox.RefreshThemeResources();
 		}
 
 		// ResourceKeys controlling the stroke and the checked fill color of the CheckBox.

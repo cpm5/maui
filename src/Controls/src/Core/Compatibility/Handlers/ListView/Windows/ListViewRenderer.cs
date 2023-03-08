@@ -1,31 +1,32 @@
+#nullable disable
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Windows.Foundation;
+using Microsoft.Maui.Controls.Internals;
+using Microsoft.Maui.Controls.Platform;
+using Microsoft.Maui.Controls.Platform.Compatibility;
+using Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;
+using Microsoft.Maui.Devices;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using WListView = Microsoft.UI.Xaml.Controls.ListView;
-using WBinding = Microsoft.UI.Xaml.Data.Binding;
-using WApp = Microsoft.UI.Xaml.Application;
-using WRect = Windows.Foundation.Rect;
-using Microsoft.Maui.Controls.Internals;
-using Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;
-using Microsoft.Maui.Devices;
+using Windows.Foundation;
 using Specifics = Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific.ListView;
-using System.Collections.ObjectModel;
-using Microsoft.Maui.Controls.Platform;
 using UwpScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility;
+using WApp = Microsoft.UI.Xaml.Application;
+using WBinding = Microsoft.UI.Xaml.Data.Binding;
+using WListView = Microsoft.UI.Xaml.Controls.ListView;
+using WRect = Windows.Foundation.Rect;
 using WSelectionChangedEventArgs = Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs;
-using Microsoft.Maui.Controls.Platform.Compatibility;
 
 namespace Microsoft.Maui.Controls.Handlers.Compatibility
 {
@@ -61,6 +62,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			internal ListViewRenderer ListViewRenderer { get; }
 			public ListViewTransparent(ListViewRenderer listViewRenderer) : base()
 			{
+				this.ApplyListViewStyles();
 				ListViewRenderer = listViewRenderer;
 			}
 
@@ -107,7 +109,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 						ItemTemplate = (Microsoft.UI.Xaml.DataTemplate)WApp.Current.Resources["CellTemplate"],
 						HeaderTemplate = (Microsoft.UI.Xaml.DataTemplate)WApp.Current.Resources["View"],
 						FooterTemplate = (Microsoft.UI.Xaml.DataTemplate)WApp.Current.Resources["View"],
-						ItemContainerStyle = (Microsoft.UI.Xaml.Style)WApp.Current.Resources["FormsListViewItem"],
+						ItemContainerStyle = (Microsoft.UI.Xaml.Style)WApp.Current.Resources["MauiListViewItem"],
 						GroupStyleSelector = (GroupStyleSelector)WApp.Current.Resources["ListViewGroupSelector"]
 					};
 
@@ -619,8 +621,8 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			var semanticLocation = new SemanticZoomLocation { Item = c };
 
-			// async scrolling
-			await Control.Dispatcher.RunAsync(global::Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+			// NOTE: For now, WinUI Dispatcher and CoreDisptacher are null. We use DispatcherQueue instead.
+			Control.DispatcherQueue.TryEnqueue(UI.Dispatching.DispatcherQueuePriority.Normal, () =>
 			{
 				switch (toPosition)
 				{

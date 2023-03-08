@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.ComponentModel;
 using CoreAnimation;
@@ -108,6 +109,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			else if (behavior == FlyoutBehavior.Disabled)
 				IsOpen = false;
 			LayoutSidebar(false);
+			UpdateFlyoutAccessibility();
 		}
 
 		#endregion IFlyoutBehaviorObserver
@@ -155,7 +157,41 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 				_isOpen = value;
 				Shell.SetValueFromRenderer(Shell.FlyoutIsPresentedProperty, value);
+				UpdateFlyoutAccessibility();
 			}
+		}
+
+		void UpdateFlyoutAccessibility()
+		{
+			bool flyoutElementsHidden = false;
+			bool detailsElementsHidden = false;
+
+			switch (_flyoutBehavior)
+			{
+				case FlyoutBehavior.Flyout:
+					flyoutElementsHidden = !IsOpen;
+					detailsElementsHidden = IsOpen;
+
+					break;
+
+				case FlyoutBehavior.Locked:
+					flyoutElementsHidden = false;
+					detailsElementsHidden = false;
+
+					break;
+
+				case FlyoutBehavior.Disabled:
+					flyoutElementsHidden = true;
+					detailsElementsHidden = false;
+
+					break;
+			}
+
+			if (Flyout?.ViewController?.View != null)
+				Flyout.ViewController.View.AccessibilityElementsHidden = flyoutElementsHidden;
+
+			if (Detail?.View != null)
+				Detail.View.AccessibilityElementsHidden = detailsElementsHidden;
 		}
 
 		UIPanGestureRecognizer PanGestureRecognizer { get; set; }
@@ -194,6 +230,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 			((IShellController)Shell).AddFlyoutBehaviorObserver(this);
 			UpdateFlowDirection();
+			UpdateFlyoutAccessibility();
 		}
 
 		protected override void Dispose(bool disposing)
@@ -422,6 +459,8 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 						UpdateTapoffView();
 						_flyoutAnimation = null;
+
+						UIAccessibility.PostNotification(UIAccessibilityPostNotification.ScreenChanged, null);
 					}
 				});
 
@@ -437,6 +476,8 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 				{
 					TapoffView.Layer.Opacity = IsOpen ? 1 : 0;
 				}
+
+				UIAccessibility.PostNotification(UIAccessibilityPostNotification.ScreenChanged, null);
 			}
 
 			void UpdateTapoffView()

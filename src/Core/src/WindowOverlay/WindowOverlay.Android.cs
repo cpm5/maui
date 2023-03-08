@@ -19,16 +19,18 @@ namespace Microsoft.Maui
 			if (IsPlatformViewInitialized)
 				return true;
 
-			if (Window == null)
+			if (Window?.Content?.Handler == null)
 				return false;
 
 			var platformWindow = Window?.Content?.ToPlatform();
+
 			if (platformWindow == null)
 				return false;
 
 			var handler = Window?.Handler as WindowHandler;
 			if (handler?.MauiContext == null)
 				return false;
+
 			var rootManager = handler.MauiContext.GetNavigationRootManager();
 			if (rootManager == null)
 				return false;
@@ -39,6 +41,10 @@ namespace Microsoft.Maui
 
 			_nativeActivity = activity;
 			_nativeLayer = rootManager.RootView as ViewGroup;
+			_nativeLayer = _nativeLayer?.GetFirstChildOfType<CoordinatorLayout>() ?? _nativeLayer;
+
+			if (_nativeLayer is ContainerView containerView)
+				_nativeLayer = containerView.MainView as ViewGroup;
 
 			if (_nativeLayer?.Context == null)
 				return false;
@@ -91,7 +97,10 @@ namespace Microsoft.Maui
 			if (e.Event.Action != MotionEventActions.Down && e.Event.ButtonState != MotionEventButtonState.Primary)
 				return;
 
-			var point = new Point(e.Event.RawX, e.Event.RawY);
+			var x = this._nativeLayer?.Context.FromPixels(e.Event.RawX) ?? 0;
+			var y = this._nativeLayer?.Context.FromPixels(e.Event.RawY) ?? 0;
+
+			var point = new Point(x, y);
 
 			e.Handled = false;
 			if (DisableUITouchEventPassthrough)

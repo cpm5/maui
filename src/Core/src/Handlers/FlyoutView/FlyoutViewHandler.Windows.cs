@@ -19,15 +19,15 @@ namespace Microsoft.Maui.Handlers
 		protected override void ConnectHandler(RootNavigationView platformView)
 		{
 			_navigationRootManager = MauiContext?.GetNavigationRootManager();
-			platformView.PaneOpened += OnPaneOepened;
+			platformView.PaneOpened += OnPaneOpened;
 		}
 
 		protected override void DisconnectHandler(RootNavigationView platformView)
 		{
-			platformView.PaneOpened -= OnPaneOepened;
+			platformView.PaneOpened -= OnPaneOpened;
 		}
 
-		void OnPaneOepened(NavigationView sender, object args)
+		void OnPaneOpened(NavigationView sender, object args)
 		{
 			VirtualView.IsPresented = sender.IsPaneOpen;
 		}
@@ -44,6 +44,9 @@ namespace Microsoft.Maui.Handlers
 		{
 			_ = handler.MauiContext ?? throw new InvalidOperationException($"{nameof(MauiContext)} should have been set by base class.");
 			_ = handler.VirtualView.Flyout.ToPlatform(handler.MauiContext);
+
+			if (handler.PlatformView is RootNavigationView rnv)
+				rnv.FlyoutView = handler.VirtualView.Flyout;
 
 			handler.PlatformView.FlyoutCustomContent = handler.VirtualView.Flyout?.ToPlatform(handler.MauiContext);
 		}

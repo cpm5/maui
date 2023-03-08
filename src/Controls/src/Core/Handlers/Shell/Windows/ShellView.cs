@@ -1,10 +1,12 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Microsoft.Maui.Controls.Handlers;
+using Microsoft.Maui.Platform;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Maui.Controls.Handlers;
 
 namespace Microsoft.Maui.Controls.Platform
 {
@@ -40,6 +42,8 @@ namespace Microsoft.Maui.Controls.Platform
 			// If we set it earlier than this then WinUI will transition it back to false
 			if (IsPaneOpen != Element.FlyoutIsPresented)
 				IsPaneOpen = Element.FlyoutIsPresented;
+
+			UpdateFlyoutBackdrop();
 		}
 
 		private protected override void UpdateFlyoutCustomContent()
@@ -70,6 +74,7 @@ namespace Microsoft.Maui.Controls.Platform
 			TogglePaneButton?.SetAutomationPropertiesAutomationId("OK");
 
 			base.OnApplyTemplateCore();
+			UpdateFlyoutBackdrop();
 		}
 
 		internal void UpdateFlyoutPosition()
@@ -121,7 +126,9 @@ namespace Microsoft.Maui.Controls.Platform
 				foreach (var item in newItems)
 				{
 					if (!FlyoutItems.Contains(item))
+					{
 						FlyoutItems.Add(item);
+					}
 				}
 
 				for (var i = FlyoutItems.Count - 1; i >= 0; i--)
@@ -131,6 +138,9 @@ namespace Microsoft.Maui.Controls.Platform
 						FlyoutItems.RemoveAt(i);
 				}
 			}
+
+			if (!FlyoutItems.Contains(SelectedItem))
+				SelectedItem = null;
 		}
 
 		IEnumerable<object> IterateItems(List<List<Element>> groups)
@@ -142,14 +152,33 @@ namespace Microsoft.Maui.Controls.Platform
 				{
 					yield return new FlyoutItemMenuSeparator(separatorNumber++); // Creates a separator
 				}
+
 				foreach (var item in group)
 				{
-					yield return item;
+					bool foundExistingVM = false;
+
+					// Check to see if this element already has a VM counter part
+					foreach (var navItem in FlyoutItems)
+					{
+						if (navItem is NavigationViewItemViewModel viewModel && viewModel.Data == item)
+						{
+							foundExistingVM = true;
+							yield return viewModel;
+						}
+					}
+
+					if (!foundExistingVM)
+					{
+						yield return new NavigationViewItemViewModel()
+						{
+							Data = item
+						};
+					}
 				}
 			}
 		}
 
-		class FlyoutItemMenuSeparator : MenuFlyoutSeparator
+		class FlyoutItemMenuSeparator : Microsoft.UI.Xaml.Controls.MenuFlyoutSeparator
 		{
 			public FlyoutItemMenuSeparator(int separatorNumber)
 			{
@@ -164,7 +193,28 @@ namespace Microsoft.Maui.Controls.Platform
 
 		internal void SwitchShellItem(ShellItem newItem, bool animate = true)
 		{
-			SelectedItem = newItem;
+			var navItems = FlyoutItems.OfType<NavigationViewItemViewModel>();
+
+			// Implicit items aren't items that are surfaced to the user 
+			// or data structures. So, we just want to find the element
+			// the user defined on Shell
+			if (Routing.IsImplicit(newItem))
+			{
+				if (Routing.IsImplicit(newItem.CurrentItem))
+					SelectedItem = navItems.GetWithData(newItem.CurrentItem.CurrentItem);
+				else
+					SelectedItem = navItems.GetWithData(newItem.CurrentItem);
+			}
+			else
+			{
+				if (navItems.TryGetWithData(newItem, out NavigationViewItemViewModel vm1))
+					SelectedItem = vm1;
+				else if (navItems.TryGetWithData(newItem.CurrentItem, out NavigationViewItemViewModel vm2))
+					SelectedItem = vm2;
+				else if (navItems.TryGetWithData(newItem.CurrentItem.CurrentItem, out NavigationViewItemViewModel vm3))
+					SelectedItem = vm3;
+			}
+
 			var handler = CreateShellItemView();
 			if (handler.VirtualView != newItem)
 				handler.SetVirtualView(newItem);
@@ -202,7 +252,14 @@ namespace Microsoft.Maui.Controls.Platform
 
 		ShellItemHandler CreateShellItemView()
 		{
-			ItemRenderer ??= (ShellItemHandler)Element.CurrentItem.ToHandler(MauiContext);
+			if (ItemRenderer == null)
+			{
+				ItemRenderer = (ShellItemHandler)Element.CurrentItem.ToHandler(MauiContext);
+				if (ItemRenderer.PlatformView is NavigationView nv)
+				{
+					nv.SelectionChanged += TabSelectionChanged;
+				}
+			}
 
 			if (ItemRenderer.PlatformView != (Content as FrameworkElement))
 				Content = ItemRenderer.PlatformView;
@@ -212,5 +269,8 @@ namespace Microsoft.Maui.Controls.Platform
 
 			return ItemRenderer;
 		}
+
+		void TabSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args) =>
+			Element.Handler.UpdateValue(nameof(Shell.CurrentItem));
 	}
 }

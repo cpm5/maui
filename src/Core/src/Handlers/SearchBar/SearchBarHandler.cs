@@ -6,8 +6,8 @@ using PlatformView = AndroidX.AppCompat.Widget.SearchView;
 #elif WINDOWS
 using PlatformView = Microsoft.UI.Xaml.Controls.AutoSuggestBox;
 #elif TIZEN
-using PlatformView = Tizen.UIExtensions.ElmSharp.SearchBar;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+using PlatformView = Microsoft.Maui.Platform.MauiSearchBar;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 #endif
 
@@ -17,11 +17,10 @@ namespace Microsoft.Maui.Handlers
 	{
 		public static IPropertyMapper<ISearchBar, ISearchBarHandler> Mapper = new PropertyMapper<ISearchBar, ISearchBarHandler>(ViewHandler.ViewMapper)
 		{
-#if __ANDROID__ || __WINDOWS__
-			[nameof(ISearchBar.Background)] = MapBackground,
-#elif __IOS__
+#if __IOS__
 			[nameof(ISearchBar.IsEnabled)] = MapIsEnabled,
 #endif
+			[nameof(ISearchBar.Background)] = MapBackground,
 			[nameof(ISearchBar.CharacterSpacing)] = MapCharacterSpacing,
 			[nameof(ISearchBar.Font)] = MapFont,
 			[nameof(ITextAlignment.HorizontalTextAlignment)] = MapHorizontalTextAlignment,
@@ -40,18 +39,17 @@ namespace Microsoft.Maui.Handlers
 		{
 		};
 
-		static SearchBarHandler()
-		{
-#if __IOS__
-			Mapper.PrependToMapping(nameof(IView.FlowDirection), (h, __) => h.UpdateValue(nameof(ITextAlignment.HorizontalTextAlignment)));
-#endif
-		}
-
 		public SearchBarHandler() : base(Mapper)
 		{
 		}
 
-		public SearchBarHandler(IPropertyMapper? mapper = null) : base(mapper ?? Mapper)
+		public SearchBarHandler(IPropertyMapper? mapper)
+			: base(mapper ?? Mapper, CommandMapper)
+		{
+		}
+
+		public SearchBarHandler(IPropertyMapper? mapper, CommandMapper? commandMapper)
+			: base(mapper ?? Mapper, commandMapper ?? CommandMapper)
 		{
 		}
 

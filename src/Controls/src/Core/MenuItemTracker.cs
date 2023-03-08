@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -150,7 +151,12 @@ namespace Microsoft.Maui.Controls
 			{
 				EmitCollectionChanged();
 			}
+
+			PagePropertyChanged?.Invoke(sender, propertyChangedEventArgs);
 		}
+
+		public event EventHandler<PropertyChangedEventArgs> PagePropertyChanged;
+		public event EventHandler<EventArgs> PageAppearing;
 
 		void RegisterChildPage(Page page)
 		{
@@ -159,6 +165,12 @@ namespace Microsoft.Maui.Controls
 
 			((ObservableCollection<TMenuItem>)GetMenuItems(page)).CollectionChanged += OnCollectionChanged;
 			page.PropertyChanged += OnPropertyChanged;
+			page.Appearing += OnPageAppearing;
+		}
+
+		void OnPageAppearing(object sender, EventArgs e)
+		{
+			PageAppearing?.Invoke(sender, e);
 		}
 
 		void TrackTarget(Page page)
@@ -182,11 +194,12 @@ namespace Microsoft.Maui.Controls
 				return;
 			}
 
-			page.Descendants().OfType<Page>().ForEach(RegisterChildPage);
+			page.Descendants<Page>().ForEach(RegisterChildPage);
 
 			page.DescendantAdded += OnChildAdded;
 			page.DescendantRemoved += OnChildRemoved;
 			page.PropertyChanged += OnPropertyChanged;
+			page.Appearing += OnPageAppearing;
 		}
 
 		void OnShellNavigating(object sender, ShellNavigatingEventArgs e)
@@ -213,6 +226,7 @@ namespace Microsoft.Maui.Controls
 
 			((ObservableCollection<TMenuItem>)GetMenuItems(page)).CollectionChanged -= OnCollectionChanged;
 			page.PropertyChanged -= OnPropertyChanged;
+			page.Appearing -= OnPageAppearing;
 		}
 
 		void UntrackTarget(Page page)
@@ -236,6 +250,7 @@ namespace Microsoft.Maui.Controls
 			page.DescendantAdded -= OnChildAdded;
 			page.DescendantRemoved -= OnChildRemoved;
 			page.PropertyChanged -= OnPropertyChanged;
+			page.Appearing -= OnPageAppearing;
 		}
 	}
 }

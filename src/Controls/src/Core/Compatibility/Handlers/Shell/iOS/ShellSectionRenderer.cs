@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -99,7 +100,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 		[Export("navigationBar:shouldPopItem:")]
 		[Internals.Preserve(Conditional = true)]
-		public bool ShouldPopItem(UINavigationBar navigationBar, UINavigationItem item) =>
+		public bool ShouldPopItem(UINavigationBar _, UINavigationItem __) =>
 			SendPop();
 
 		internal bool SendPop()
@@ -130,27 +131,27 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 				}
 			}
 
-			bool allowPop = ShouldPop();
 
-			if (allowPop)
+			// Do not remove, wonky behavior on some versions of iOS if you dont dispatch
+			// Shane: ^ not sure if this is true anymore because of how
+			// we now route this through "GoToAsync"
+			CoreFoundation.DispatchQueue.MainQueue.DispatchAsync(async () =>
 			{
-				// Do not remove, wonky behavior on some versions of iOS if you dont dispatch
-				CoreFoundation.DispatchQueue.MainQueue.DispatchAsync(() =>
+				var navItemsCount = NavigationBar.Items.Length;
+
+				await _context.Shell.GoToAsync("..", true);
+
+				// This means the navigation was cancelled
+				if (NavigationBar.Items.Length == navItemsCount)
 				{
-					_popCompletionTask = new TaskCompletionSource<bool>();
-					SendPoppedOnCompletion(_popCompletionTask.Task);
-					PopViewController(true);
-				});
-			}
-			else
-			{
-				for (int i = 0; i < NavigationBar.Subviews.Length; i++)
-				{
-					var child = NavigationBar.Subviews[i];
-					if (child.Alpha != 1)
-						UIView.Animate(.2f, () => child.Alpha = 1);
+					for (int i = 0; i < NavigationBar.Subviews.Length; i++)
+					{
+						var child = NavigationBar.Subviews[i];
+						if (child.Alpha != 1)
+							UIView.Animate(.2f, () => child.Alpha = 1);
+					}
 				}
-			}
+			});
 
 			return false;
 		}
@@ -698,7 +699,6 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 			public override void WillShowViewController(UINavigationController navigationController, [Transient] UIViewController viewController, bool animated)
 			{
-				System.Diagnostics.Debug.Write($"WillShowViewController {viewController.GetHashCode()}");
 				var element = _self.ElementForViewController(viewController);
 
 				bool navBarVisible;
@@ -714,6 +714,18 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 				{
 					// handle swipe to dismiss gesture 
 					coordinator.NotifyWhenInteractionChanges(OnInteractionChanged);
+				}
+
+				// Because the back button title needs to be set on the previous VC
+				// We want to set the BackButtonItem as early as possible so there is no flickering
+				var currentPage = _self._context?.Shell?.GetCurrentShellPage();
+				var trackers = _self._trackers;
+				if (currentPage?.Handler is IPlatformViewHandler pvh &&
+					pvh.ViewController == viewController &&
+					trackers.TryGetValue(currentPage, out var tracker) &&
+					tracker is ShellPageRendererTracker shellRendererTracker)
+				{
+					shellRendererTracker.UpdateToolbarItemsInternal(false);
 				}
 			}
 

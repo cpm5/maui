@@ -1,35 +1,50 @@
+#nullable disable
+using System;
 using System.ComponentModel;
+using Microsoft.Maui.Controls.Platform;
 using Microsoft.Maui.Graphics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Maui.Controls.Platform;
 using WBorder = Microsoft.UI.Xaml.Controls.Border;
+using WRect = Windows.Foundation.Rect;
 
 namespace Microsoft.Maui.Controls.Handlers.Compatibility
 {
 	public class FrameRenderer : ViewRenderer<Frame, WBorder>
 	{
+		const int FrameBorderThickness = 1;
+
 		public static IPropertyMapper<Frame, FrameRenderer> Mapper
-			= new PropertyMapper<Frame, FrameRenderer>(VisualElementRendererMapper);
+			= new PropertyMapper<Frame, FrameRenderer>(VisualElementRendererMapper)
+			{
+				// https://github.com/dotnet/maui/issues/11880
+				// Dimension constraints need to be propagated to the container 
+				// in order for the `PlatformMeasure` calls to return the correct
+				// get desired size
+				[nameof(IView.Width)] = MapWidth,
+				[nameof(IView.Height)] = MapHeight,
+				[nameof(IView.MinimumHeight)] = MapMinimumHeight,
+				[nameof(IView.MaximumHeight)] = MapMaximumHeight,
+				[nameof(IView.MinimumWidth)] = MapMinimumWidth,
+				[nameof(IView.MaximumWidth)] = MapMaximumWidth,
+			};
 
 		public static CommandMapper<Frame, FrameRenderer> CommandMapper
 			= new CommandMapper<Frame, FrameRenderer>(VisualElementRendererCommandMapper);
 
-		public FrameRenderer() : base(Mapper, CommandMapper)
+		public FrameRenderer() : this(Mapper, CommandMapper)
 		{
-			AutoPackage = false;
 		}
 
-		protected override AutomationPeer OnCreateAutomationPeer()
+		public FrameRenderer(IPropertyMapper mapper)
+			: this(mapper, CommandMapper)
 		{
-			// We need an automation peer so we can interact with this in automated tests
-			if (Control == null)
-			{
-				return new FrameworkElementAutomationPeer(this);
-			}
+		}
 
-			return new FrameworkElementAutomationPeer(Control);
+		public FrameRenderer(IPropertyMapper mapper, CommandMapper commandMapper) : base(mapper, commandMapper)
+		{
+			AutoPackage = false;
 		}
 
 		protected override void OnElementChanged(ElementChangedEventArgs<Frame> e)
@@ -44,6 +59,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				PackChild();
 				UpdateBorder();
 				UpdateCornerRadius();
+				UpdatePadding();
 			}
 		}
 
@@ -63,6 +79,52 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			{
 				UpdateCornerRadius();
 			}
+			else if (e.PropertyName == Frame.PaddingProperty.PropertyName)
+			{
+				UpdatePadding();
+			}
+		}
+
+		void UpdatePadding()
+		{
+			Control.Padding = Element.Padding.ToPlatform();
+		}
+
+		protected override global::Windows.Foundation.Size ArrangeOverride(global::Windows.Foundation.Size finalSize)
+		{
+			// We need this so the `Border` control will arrange and have a size
+			Control?.Arrange(new WRect(0, 0, finalSize.Width, finalSize.Height));
+
+			if (Element is IContentView cv)
+			{
+				finalSize = cv.CrossPlatformArrange(new Rect(0, 0, finalSize.Width, finalSize.Height)).ToPlatform();
+			}
+
+			return new global::Windows.Foundation.Size(Math.Max(0, finalSize.Width), Math.Max(0, finalSize.Height));
+		}
+
+		protected override global::Windows.Foundation.Size MeasureOverride(global::Windows.Foundation.Size availableSize)
+		{
+			if (Element is IContentView cv)
+			{
+				// If there's a border specified, include the thickness in our measurements
+				// multiplied by 2 to account for both sides (left/right or top/bot)
+				var borderThickness = (Element.BorderColor.IsNotDefault() ? FrameBorderThickness : 0) * 2;
+
+				// Measure content but subtract border from available space
+				var measureContent = cv.CrossPlatformMeasure(
+					availableSize.Width - borderThickness,
+					availableSize.Height - borderThickness).ToPlatform();
+
+				// Add the border space to the final calculation
+				measureContent = new Size(
+					measureContent.Width + borderThickness,
+					measureContent.Height + borderThickness).ToPlatform();
+
+				return measureContent;
+			}
+
+			return MinimumSize().ToPlatform();
 		}
 
 		protected override void UpdateBackgroundColor()
@@ -88,7 +150,10 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		void PackChild()
 		{
 			if (Element.Content == null)
+			{
+				Control.Child = null;
 				return;
+			}
 
 			Control.Child = Element.Content.ToPlatform(MauiContext);
 		}
@@ -98,7 +163,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			if (Element.BorderColor.IsNotDefault())
 			{
 				Control.BorderBrush = Element.BorderColor.ToPlatform();
-				Control.BorderThickness = WinUIHelpers.CreateThickness(1);
+				Control.BorderThickness = WinUIHelpers.CreateThickness(FrameBorderThickness);
 			}
 			else
 			{
@@ -114,6 +179,46 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				cornerRadius = 5f; // default corner radius
 
 			Control.CornerRadius = WinUIHelpers.CreateCornerRadius(cornerRadius);
+		}
+
+		// https://github.com/dotnet/maui/issues/11880
+		// Dimension constraints need to be propagated to the container 
+		// in order for the `PlatformMeasure` calls to return the correct
+		// get desired size
+		static void MapWidth(IViewHandler handler, IView view)
+		{
+			VisualElementRendererMapper.UpdateProperty(handler, view, nameof(IView.Width));
+			handler.ToPlatform().UpdateWidth(view);
+		}
+
+		static void MapHeight(IViewHandler handler, IView view)
+		{
+			VisualElementRendererMapper.UpdateProperty(handler, view, nameof(IView.Height));
+			handler.ToPlatform().UpdateHeight(view);
+		}
+
+		static void MapMinimumHeight(IViewHandler handler, IView view)
+		{
+			VisualElementRendererMapper.UpdateProperty(handler, view, nameof(IView.MinimumHeight));
+			handler.ToPlatform().UpdateMinimumHeight(view);
+		}
+
+		static void MapMaximumHeight(IViewHandler handler, IView view)
+		{
+			VisualElementRendererMapper.UpdateProperty(handler, view, nameof(IView.MaximumHeight));
+			handler.ToPlatform().UpdateMaximumHeight(view);
+		}
+
+		static void MapMinimumWidth(IViewHandler handler, IView view)
+		{
+			VisualElementRendererMapper.UpdateProperty(handler, view, nameof(IView.MinimumWidth));
+			handler.ToPlatform().UpdateMinimumWidth(view);
+		}
+
+		static void MapMaximumWidth(IViewHandler handler, IView view)
+		{
+			VisualElementRendererMapper.UpdateProperty(handler, view, nameof(IView.MaximumWidth));
+			handler.ToPlatform().UpdateMaximumWidth(view);
 		}
 	}
 }

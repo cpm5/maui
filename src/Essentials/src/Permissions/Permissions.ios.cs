@@ -13,6 +13,7 @@ namespace Microsoft.Maui.ApplicationModel
 	{
 		internal static partial class AVPermissions
 		{
+#pragma warning disable CA1416 // https://github.com/xamarin/xamarin-macios/issues/14619			
 			internal static PermissionStatus CheckPermissionsStatus(AVAuthorizationMediaType mediaType)
 			{
 				var status = AVCaptureDevice.GetAuthorizationStatus(mediaType);
@@ -38,13 +39,16 @@ namespace Microsoft.Maui.ApplicationModel
 					return PermissionStatus.Unknown;
 				}
 			}
+#pragma warning restore CA1416
 		}
 
 		public partial class Camera : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSCameraUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -52,6 +56,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(AVPermissions.CheckPermissionsStatus(AVAuthorizationMediaType.Video));
 			}
 
+			/// <inheritdoc/>
 			public override async Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -68,9 +73,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class ContactsRead : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSContactsUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -78,6 +85,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(GetAddressBookPermissionStatus());
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -117,9 +125,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class ContactsWrite : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSContactsUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -127,6 +137,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(ContactsRead.GetAddressBookPermissionStatus());
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -143,9 +154,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class Media : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSAppleMusicUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -153,6 +166,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(GetMediaPermissionStatus());
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -207,9 +221,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class Microphone : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSMicrophoneUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -217,6 +233,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(AVPermissions.CheckPermissionsStatus(AVAuthorizationMediaType.Audio));
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -233,9 +250,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class Speech : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSSpeechRecognitionUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -243,6 +262,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(GetSpeechPermissionStatus());
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -256,6 +276,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return RequestSpeechPermission();
 			}
 
+#pragma warning disable CA1416 // https://github.com/xamarin/xamarin-macios/issues/14619
 			internal static PermissionStatus GetSpeechPermissionStatus()
 			{
 				var status = SFSpeechRecognizer.AuthorizationStatus;
@@ -293,6 +314,7 @@ namespace Microsoft.Maui.ApplicationModel
 
 				return tcs.Task;
 			}
+#pragma warning restore CA1416
 		}
 	}
 }

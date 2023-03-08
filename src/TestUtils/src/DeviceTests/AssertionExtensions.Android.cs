@@ -3,9 +3,12 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Android.Graphics;
+using Android.Graphics.Drawables;
 using Android.Text;
 using Android.Views;
+using Android.Views.InputMethods;
 using Android.Widget;
+using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Platform;
 using Xunit;
 using AColor = Android.Graphics.Color;
@@ -15,14 +18,123 @@ namespace Microsoft.Maui.DeviceTests
 {
 	public static partial class AssertionExtensions
 	{
+		public static async Task SendValueToKeyboard(this AView view, char value, int timeout = 1000)
+		{
+			await view.ShowKeyboardForView(timeout);
+
+			// I tried various permutations of KeyEventActions to set the keyboard in upper case
+			// But I wasn't successful
+			if (Enum.TryParse($"{value}".ToUpper(), out Keycode result))
+			{
+				view.OnCreateInputConnection(new EditorInfo())?
+					.SendKeyEvent(new KeyEvent(10, 10, KeyEventActions.Down, result, 0));
+
+				view.OnCreateInputConnection(new EditorInfo())?
+					.SendKeyEvent(new KeyEvent(10, 10, KeyEventActions.Up, result, 0));
+			}
+		}
+
+		public static async Task SendKeyboardReturnType(this AView view, ReturnType returnType, int timeout = 1000)
+		{
+			await view.ShowKeyboardForView(timeout);
+
+			view
+				.OnCreateInputConnection(new EditorInfo())?
+				.PerformEditorAction(returnType.ToPlatform());
+
+			// Let the action propagate
+			await Task.Delay(10);
+		}
+
+		public static async Task WaitForFocused(this AView view, int timeout = 1000)
+		{
+			if (!view.IsFocused)
+			{
+				TaskCompletionSource focusSource = new TaskCompletionSource();
+				view.FocusChange += OnFocused;
+				await focusSource.Task.WaitAsync(TimeSpan.FromMilliseconds(timeout));
+
+				// Even thuogh the event fires focus hasn't fully been achieved
+				await Task.Delay(10);
+
+				void OnFocused(object? sender, AView.FocusChangeEventArgs e)
+				{
+					if (!e.HasFocus)
+						return;
+
+					view.FocusChange -= OnFocused;
+					focusSource.SetResult();
+				}
+			}
+		}
+
+		public static async Task WaitForUnFocused(this AView view, int timeout = 1000)
+		{
+			if (view.IsFocused)
+			{
+				TaskCompletionSource focusSource = new TaskCompletionSource();
+				view.FocusChange += OnUnFocused;
+				await focusSource.Task.WaitAsync(TimeSpan.FromMilliseconds(timeout));
+
+				// Even though the event fires unfocus hasn't fully been achieved
+				await Task.Delay(10);
+
+				void OnUnFocused(object? sender, AView.FocusChangeEventArgs e)
+				{
+					if (e.HasFocus)
+						return;
+
+					view.FocusChange -= OnUnFocused;
+					focusSource.SetResult();
+				}
+			}
+		}
+
+		public static Task FocusView(this AView view, int timeout = 1000)
+		{
+			if (!view.IsFocused)
+			{
+				view.Focus(new FocusRequest(view.IsFocused));
+				return view.WaitForFocused(timeout);
+			}
+
+			return Task.CompletedTask;
+		}
+
+		public static async Task ShowKeyboardForView(this AView view, int timeout = 1000)
+		{
+			await view.FocusView(timeout);
+			KeyboardManager.ShowKeyboard(view);
+			await view.WaitForKeyboardToShow(timeout);
+		}
+
+		public static async Task HideKeyboardForView(this AView view, int timeout = 1000)
+		{
+			await view.FocusView(timeout);
+			KeyboardManager.HideKeyboard(view);
+			await view.WaitForKeyboardToHide(timeout);
+		}
+
+		public static async Task WaitForKeyboardToShow(this AView view, int timeout = 1000)
+		{
+			var result = await Wait(() => KeyboardManager.IsSoftKeyboardVisible(view), timeout);
+			Assert.True(result);
+
+		}
+
+		public static async Task WaitForKeyboardToHide(this AView view, int timeout = 1000)
+		{
+			var result = await Wait(() => !KeyboardManager.IsSoftKeyboardVisible(view), timeout);
+			Assert.True(result);
+		}
+
 		public static Task<bool> WaitForLayout(AView view, int timeout = 1000)
 		{
 			var tcs = new TaskCompletionSource<bool>();
 
 			view.LayoutChange += OnLayout;
-
 			var cts = new CancellationTokenSource();
-			cts.Token.Register(() => OnLayout(view));
+			cts.Token.Register(() => OnLayout(view), true);
 			cts.CancelAfter(timeout);
 
 			return tcs.Task;
@@ -31,26 +143,29 @@ namespace Microsoft.Maui.DeviceTests
 			{
 				var view = (AView)sender!;
 
-				view.LayoutChange -= OnLayout;
+				if (view.Handle != IntPtr.Zero)
+					view.LayoutChange -= OnLayout;
 
+				// let the layout resolve after changing
 				tcs.TrySetResult(e != null);
 			}
 		}
 
-		public static string CreateColorAtPointError(this Bitmap bitmap, AColor expectedColor, int x, int y)
+		public static string ToBase64String(this Bitmap bitmap)
 		{
-			return CreateColorError(bitmap, $"Expected {expectedColor} at point {x},{y} in renderered view.");
+			using var ms = new MemoryStream();
+			bitmap.Compress(Bitmap.CompressFormat.Png, 0, ms);
+			return Convert.ToBase64String(ms.ToArray());
 		}
 
-		public static string CreateColorError(this Bitmap bitmap, string message)
-		{
-			using (var ms = new MemoryStream())
-			{
-				bitmap.Compress(Bitmap.CompressFormat.Png, 0, ms);
-				var imageAsString = Convert.ToBase64String(ms.ToArray());
-				return $"{message}. This is what it looked like:<img>{imageAsString}</img>";
-			}
-		}
+		public static string CreateColorAtPointError(this Bitmap bitmap, AColor expectedColor, int x, int y) =>
+			CreateColorError(bitmap, $"Expected {expectedColor} at point {x},{y} in renderered view.");
+
+		public static string CreateColorError(this Bitmap bitmap, string message) =>
+			$"{message} This is what it looked like:<img>{bitmap.ToBase64String()}</img>";
+
+		public static string CreateEqualError(this Bitmap bitmap, Bitmap other, string message) =>
+			$"{message} This is what it looked like: <img>{bitmap.ToBase64String()}</img> and <img>{other.ToBase64String()}</img>";
 
 		public static AColor ColorAtPoint(this Bitmap bitmap, int x, int y, bool includeAlpha = false)
 		{
@@ -75,10 +190,28 @@ namespace Microsoft.Maui.DeviceTests
 			view.AttachAndRun(() =>
 			{
 				action();
+				return Task.FromResult(true);
+			});
+
+		public static Task<T> AttachAndRun<T>(this AView view, Func<T> action) =>
+			view.AttachAndRun(() =>
+			{
+				var result = action();
+				return Task.FromResult(result);
+			});
+
+		public static Task AttachAndRun(this AView view, Func<Task> action) =>
+			view.AttachAndRun(async () =>
+			{
+				await action();
 				return true;
 			});
 
-		public static async Task<T> AttachAndRun<T>(this AView view, Func<T> action)
+		// Android doesn't handle adding and removing views in parallel very well
+		// If a view is removed while a different test triggers a layout then you hit
+		// a NRE exception
+		static SemaphoreSlim _attachAndRunSemaphore = new SemaphoreSlim(1);
+		public static async Task<T> AttachAndRun<T>(this AView view, Func<Task<T>> action)
 		{
 			if (view.Parent is WrapperView wrapper)
 				view = wrapper;
@@ -98,17 +231,21 @@ namespace Microsoft.Maui.DeviceTests
 				var act = context.GetActivity()!;
 				var rootView = act.FindViewById<FrameLayout>(Android.Resource.Id.Content)!;
 
-				layout.AddView(view);
-				rootView.AddView(layout);
+				view.Id = AView.GenerateViewId();
+				layout.Id = AView.GenerateViewId();
 
 				try
 				{
+					await _attachAndRunSemaphore.WaitAsync();
+					layout.AddView(view);
+					rootView.AddView(layout);
 					return await Run(view, action);
 				}
 				finally
 				{
 					rootView.RemoveView(layout);
 					layout.RemoveView(view);
+					_attachAndRunSemaphore.Release();
 				}
 			}
 			else
@@ -116,14 +253,13 @@ namespace Microsoft.Maui.DeviceTests
 				return await Run(view, action);
 			}
 
-			static async Task<T> Run(AView view, Func<T> action)
+			static async Task<T> Run(AView view, Func<Task<T>> action)
 			{
 				await Task.WhenAll(
 					WaitForLayout(view),
 					Wait(() => view.Width > 0 && view.Height > 0));
 
-				var result = action();
-				return result;
+				return await action();
 			}
 		}
 
@@ -151,6 +287,15 @@ namespace Microsoft.Maui.DeviceTests
 			return bitmap;
 		}
 
+		public static Bitmap AssertColorAtCenter(this Drawable drawable, AColor expectedColor)
+		{
+			var bitmapDrawable = Assert.IsType<BitmapDrawable>(drawable);
+			var bitmap = bitmapDrawable.Bitmap;
+			Assert.NotNull(bitmap);
+
+			return bitmap!.AssertColorAtCenter(expectedColor);
+		}
+
 		public static Bitmap AssertColorAtCenter(this Bitmap bitmap, AColor expectedColor)
 		{
 			return bitmap.AssertColorAtPoint(expectedColor, bitmap.Width / 2, bitmap.Height / 2);
@@ -176,11 +321,19 @@ namespace Microsoft.Maui.DeviceTests
 			return bitmap.AssertColorAtPoint(expectedColor, bitmap.Width - 1, bitmap.Height - 1);
 		}
 
-		public static Bitmap AssertContainsColor(this Bitmap bitmap, AColor expectedColor)
+		public static Task<Bitmap> AssertContainsColor(this Bitmap bitmap, Graphics.Color expectedColor, Func<Maui.Graphics.RectF, Maui.Graphics.RectF>? withinRectModifier = null)
+			=> Task.FromResult(bitmap.AssertContainsColor(expectedColor.ToPlatform()));
+
+		public static Bitmap AssertContainsColor(this Bitmap bitmap, AColor expectedColor, Func<Maui.Graphics.RectF, Maui.Graphics.RectF>? withinRectModifier = null)
 		{
-			for (int x = 0; x < bitmap.Width; x++)
+			var imageRect = new Graphics.RectF(0, 0, bitmap.Width, bitmap.Height);
+
+			if (withinRectModifier is not null)
+				imageRect = withinRectModifier.Invoke(imageRect);
+
+			for (int x = (int)imageRect.X; x < (int)imageRect.Width; x++)
 			{
-				for (int y = 0; y < bitmap.Height; y++)
+				for (int y = (int)imageRect.Y; y < (int)imageRect.Height; y++)
 				{
 					if (bitmap.ColorAtPoint(x, y, true).IsEquivalent(expectedColor))
 					{
@@ -202,13 +355,13 @@ namespace Microsoft.Maui.DeviceTests
 			return AssertContainsColor(bitmap, expectedColor);
 		}
 
-		public static async Task<Bitmap> AssertColorAtPoint(this AView view, AColor expectedColor, int x, int y)
+		public static async Task<Bitmap> AssertColorAtPointAsync(this AView view, AColor expectedColor, int x, int y)
 		{
 			var bitmap = await view.ToBitmap();
 			return bitmap.AssertColorAtPoint(expectedColor, x, y);
 		}
 
-		public static async Task<Bitmap> AssertColorAtCenter(this AView view, AColor expectedColor)
+		public static async Task<Bitmap> AssertColorAtCenterAsync(this AView view, AColor expectedColor)
 		{
 			var bitmap = await view.ToBitmap();
 			return bitmap.AssertColorAtCenter(expectedColor);
@@ -238,6 +391,34 @@ namespace Microsoft.Maui.DeviceTests
 			return bitmap.AssertColorAtTopRight(expectedColor);
 		}
 
+		public static Task AssertEqualAsync(this Bitmap bitmap, Bitmap other)
+		{
+			Assert.NotNull(bitmap);
+			Assert.NotNull(other);
+
+			Assert.Equal(new Size(bitmap.Width, bitmap.Height), new Size(other.Width, other.Height));
+
+			Assert.True(IsMatching(), CreateEqualError(bitmap, other, $"Images did not match."));
+
+			return Task.CompletedTask;
+
+			bool IsMatching()
+			{
+				for (int x = 0; x < bitmap.Width; x++)
+				{
+					for (int y = 0; y < bitmap.Height; y++)
+					{
+						var first = bitmap.ColorAtPoint(x, y, true);
+						var second = other.ColorAtPoint(x, y, true);
+
+						if (!first.IsEquivalent(second))
+							return false;
+					}
+				}
+				return true;
+			}
+		}
+
 		public static TextUtils.TruncateAt? ToPlatform(this LineBreakMode mode) =>
 			mode switch
 			{
@@ -254,5 +435,12 @@ namespace Microsoft.Maui.DeviceTests
 			OperatingSystem.IsAndroidVersionAtLeast(28)
 				? (FontWeight)typeface.Weight
 				: typeface.IsBold ? FontWeight.Bold : FontWeight.Regular;
+
+		public static bool IsAccessibilityElement(this AView view) =>
+			view.GetSemanticPlatformElement().IsImportantForAccessibility;
+
+
+		public static bool IsExcludedWithChildren(this AView view) =>
+			view.GetSemanticPlatformElement().ImportantForAccessibility == ImportantForAccessibility.NoHideDescendants;
 	}
 }

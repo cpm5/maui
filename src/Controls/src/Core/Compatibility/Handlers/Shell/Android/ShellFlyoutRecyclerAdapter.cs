@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,7 +17,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 {
 	public class ShellFlyoutRecyclerAdapter : RecyclerView.Adapter
 	{
-		readonly IShellContext _shellContext;
+		IShellContext _shellContext;
 		List<AdapterListItem> _listItems;
 		List<List<Element>> _flyoutGroupings;
 		Action<Element> _selectedCallback;
@@ -203,13 +204,20 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 			if (disposing)
 			{
-				((IShellController)Shell).FlyoutItemsChanged -= OnFlyoutItemsChanged;
-
-				_listItems = null;
-				_selectedCallback = null;
+				Disconnect();
 			}
 
 			base.Dispose(disposing);
+		}
+
+		internal void Disconnect()
+		{
+			if (Shell is IShellController scc)
+				scc.FlyoutItemsChanged -= OnFlyoutItemsChanged;
+
+			_listItems = null;
+			_selectedCallback = null;
+			_shellContext = null;
 		}
 
 		public class AdapterListItem
@@ -258,11 +266,13 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 					if (_element == value)
 						return;
 
-					_shell.RemoveLogicalChild(View);
+					if (View.Parent is BaseShellItem bsi)
+						bsi.RemoveLogicalChild(View);
+					else
+						_shell.RemoveLogicalChild(View);
+
 					if (_element != null && _element is BaseShellItem)
 					{
-						// TODO MAUI I don't think this is relevant
-						//_element.ClearValue(AppCompat.Platform.RendererProperty);
 						_element.PropertyChanged -= OnElementPropertyChanged;
 					}
 
@@ -273,9 +283,11 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 					if (_element != null)
 					{
-						_shell.AddLogicalChild(View);
-						AutomationPropertiesProvider.AccessibilitySettingsChanged(_itemView, value);
-						//_element.SetValue(AppCompat.Platform.RendererProperty, _itemView);
+						if (value is BaseShellItem bsiNew)
+							bsiNew.AddLogicalChild(View);
+						else
+							_shell.AddLogicalChild(View);
+
 						_element.PropertyChanged += OnElementPropertyChanged;
 						UpdateVisualState();
 					}

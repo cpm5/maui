@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Microsoft.Maui.Graphics;
@@ -65,7 +64,7 @@ namespace Microsoft.Maui.Controls.Platform
 
 		public static void UpdateIconColor(this MauiToolbar platformToolbar, Toolbar toolbar)
 		{
-			// This property wasn't wired up in Controls
+			platformToolbar.IconColor = toolbar.IconColor;
 		}
 
 		public static void UpdateTitle(this MauiToolbar platformToolbar, Toolbar toolbar)
@@ -75,8 +74,7 @@ namespace Microsoft.Maui.Controls.Platform
 
 		public static void UpdateBarTextColor(this MauiToolbar platformToolbar, Toolbar toolbar)
 		{
-			if (toolbar.BarTextColor != null)
-				platformToolbar.TitleColor = toolbar.BarTextColor.ToPlatform();
+			platformToolbar.SetBarTextColor(toolbar.BarTextColor?.ToPlatform());
 		}
 
 		public static void UpdateToolbarDynamicOverflowEnabled(this MauiToolbar platformToolbar, Toolbar toolbar)

@@ -18,7 +18,7 @@ namespace Microsoft.Maui.Devices
 			var bounds = UIScreen.MainScreen.Bounds;
 			var scale = UIScreen.MainScreen.Scale;
 
-			var rate = (OperatingSystem.IsIOSVersionAtLeast(10, 3) || OperatingSystem.IsTvOSVersionAtLeast(10, 3))
+			var rate = (OperatingSystem.IsIOSVersionAtLeast(10, 3) || OperatingSystem.IsMacCatalystVersionAtLeast(10, 3) || OperatingSystem.IsTvOSVersionAtLeast(10, 3))
 				? UIScreen.MainScreen.MaximumFramesPerSecond
 				: 0;
 
@@ -31,6 +31,7 @@ namespace Microsoft.Maui.Devices
 				rate: rate);
 		}
 
+		[System.Runtime.Versioning.UnsupportedOSPlatform("ios13.0")]
 		protected override void StartScreenMetricsListeners()
 		{
 			var notificationCenter = NSNotificationCenter.DefaultCenter;
@@ -47,6 +48,8 @@ namespace Microsoft.Maui.Devices
 		void OnMainDisplayInfoChanged(NSNotification obj) =>
 			OnMainDisplayInfoChanged();
 
+#pragma warning disable CA1416 // UIApplication.StatusBarOrientation has [UnsupportedOSPlatform("ios9.0")]. (Deprecated but still works)
+#pragma warning disable CA1422 // Validate platform compatibility
 		static DisplayOrientation CalculateOrientation() =>
 			UIApplication.SharedApplication.StatusBarOrientation.IsLandscape()
 				? DisplayOrientation.Landscape
@@ -61,5 +64,8 @@ namespace Microsoft.Maui.Devices
 				UIInterfaceOrientation.LandscapeRight => DisplayRotation.Rotation90,
 				_ => DisplayRotation.Unknown,
 			};
+
+#pragma warning restore CA1422 // Validate platform compatibility
+#pragma warning restore CA1416
 	}
 }

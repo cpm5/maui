@@ -64,6 +64,7 @@ namespace Microsoft.Maui.Platform
 			base.OnPageFinished(view, url);
 		}
 
+		[System.Runtime.Versioning.SupportedOSPlatform("android23.0")]
 		public override void OnReceivedError(WebView? view, IWebResourceRequest? request, WebResourceError? error)
 		{
 			if (request != null && request.Url?.ToString() == _handler?.PlatformView.Url)
@@ -90,9 +91,14 @@ namespace Microsoft.Maui.Platform
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
-				_handler = null;
+				Disconnect();
 
 			base.Dispose(disposing);
+		}
+
+		internal void Disconnect()
+		{
+			_handler = null;
 		}
 	}
 }

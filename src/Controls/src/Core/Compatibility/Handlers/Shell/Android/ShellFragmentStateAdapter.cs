@@ -1,3 +1,4 @@
+#nullable disable
 // error CS0618: 'FragmentStatePagerAdapter' is obsolete:
 #pragma warning disable 618
 using System.Collections.Generic;
@@ -27,11 +28,10 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 		{
 			_mauiContext = mauiContext;
 			_shellSection = shellSection;
-			SectionController.ItemsCollectionChanged += OnItemsCollectionChanged;
 			_items = SectionController.GetItems();
 		}
 
-		protected virtual void OnItemsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		public void OnItemsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
 			_items = SectionController.GetItems();
 			var removeList = new List<long>();
@@ -42,8 +42,6 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 			foreach (var remove in removeList)
 				_createdShellContent.Remove(remove);
-
-			NotifyDataSetChanged();
 		}
 
 		public int CountOverride { get; set; }
@@ -52,6 +50,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 		public override Fragment CreateFragment(int position)
 		{
+
 			var shellContent = _items[position];
 			return new ShellFragmentContainer(shellContent, _mauiContext) { Arguments = Bundle.Empty };
 		}
@@ -70,6 +69,14 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 		public override bool ContainsItem(long itemId)
 		{
+			if (_createdShellContent.TryGetValue(itemId, out var shellContent) &&
+				!_items.Contains(shellContent))
+			{
+				// This means a data set change was triggered but the INCC change hasn't
+				// propagated from our xplat code to here yet
+				_createdShellContent.Remove(itemId);
+			}
+
 			return _createdShellContent.ContainsKey(itemId);
 		}
 
@@ -82,7 +89,6 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 			if (disposing)
 			{
-				SectionController.ItemsCollectionChanged -= OnItemsCollectionChanged;
 				_shellSection = null;
 
 				_items = null;

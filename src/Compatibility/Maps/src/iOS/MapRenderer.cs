@@ -11,6 +11,8 @@ using RectangleF = CoreGraphics.CGRect;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Controls.Platform;
+using Microsoft.Maui.Platform;
+using Microsoft.Maui.Maps;
 
 #if __MOBILE__
 using UIKit;
@@ -64,7 +66,9 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 				if (Element != null)
 				{
 					var mapModel = (Map)Element;
+#pragma warning disable CS0618 // Type or member is obsolete
 					MessagingCenter.Unsubscribe<Map, MapSpan>(this, MoveMessageName);
+#pragma warning restore CS0618 // Type or member is obsolete
 					((ObservableCollection<Pin>)mapModel.Pins).CollectionChanged -= OnPinCollectionChanged;
 					((ObservableCollection<MapElement>)mapModel.MapElements).CollectionChanged -= OnMapElementCollectionChanged;
 					foreach (Pin pin in mapModel.Pins)
@@ -115,7 +119,9 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			{
 				var mapModel = (Map)e.OldElement;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 				MessagingCenter.Unsubscribe<Map, MapSpan>(this, MoveMessageName);
+#pragma warning restore CS0618 // Type or member is obsolete
 
 				((ObservableCollection<Pin>)mapModel.Pins).CollectionChanged -= OnPinCollectionChanged;
 				foreach (Pin pin in mapModel.Pins)
@@ -159,15 +165,17 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 #endif
 				}
 
+#pragma warning disable CS0618 // Type or member is obsolete
 				MessagingCenter.Subscribe<Map, MapSpan>(this, MoveMessageName, (s, a) => MoveToRegion(a), mapModel);
-				if (mapModel.LastMoveToRegion != null)
-					MoveToRegion(mapModel.LastMoveToRegion, false);
+#pragma warning restore CS0618 // Type or member is obsolete
+				//if (mapModel.LastMoveToRegion != null)
+				//	MoveToRegion(mapModel.LastMoveToRegion, false);
 
 				UpdateTrafficEnabled();
 				UpdateMapType();
 				UpdateIsShowingUser();
-				UpdateHasScrollEnabled();
-				UpdateHasZoomEnabled();
+				UpdateIsScrollEnabled();
+				UpdateIsZoomEnabled();
 
 				((ObservableCollection<Pin>)mapModel.Pins).CollectionChanged += OnPinCollectionChanged;
 				OnPinCollectionChanged(mapModel.Pins, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -185,14 +193,14 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 				UpdateMapType();
 			else if (e.PropertyName == Map.IsShowingUserProperty.PropertyName)
 				UpdateIsShowingUser();
-			else if (e.PropertyName == Map.HasScrollEnabledProperty.PropertyName)
-				UpdateHasScrollEnabled();
-			else if (e.PropertyName == Map.HasZoomEnabledProperty.PropertyName)
-				UpdateHasZoomEnabled();
-			else if (e.PropertyName == Map.TrafficEnabledProperty.PropertyName)
+			else if (e.PropertyName == Map.IsScrollEnabledProperty.PropertyName)
+				UpdateIsScrollEnabled();
+			else if (e.PropertyName == Map.IsZoomEnabledProperty.PropertyName)
+				UpdateIsZoomEnabled();
+			else if (e.PropertyName == Map.IsTrafficEnabledProperty.PropertyName)
 				UpdateTrafficEnabled();
-			else if (e.PropertyName == VisualElement.HeightProperty.PropertyName && ((Map)Element).LastMoveToRegion != null)
-				_shouldUpdateRegion = ((Map)Element).MoveToLastRegionOnLayoutChange;
+			//else if (e.PropertyName == VisualElement.HeightProperty.PropertyName && ((Map)Element).LastMoveToRegion != null)
+			//	_shouldUpdateRegion = ((Map)Element).MoveToLastRegionOnLayoutChange;
 		}
 
 #if __MOBILE__
@@ -215,7 +223,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			{
 				Title = pin.Label,
 				Subtitle = pin.Address ?? "",
-				Coordinate = new CLLocationCoordinate2D(pin.Position.Latitude, pin.Position.Longitude)
+				Coordinate = new CLLocationCoordinate2D(pin.Location.Latitude, pin.Location.Longitude)
 			};
 		}
 
@@ -232,7 +240,9 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			mapPin = mapView.DequeueReusableAnnotation(defaultPinId);
 			if (mapPin == null)
 			{
+#pragma warning disable CA1416, CA1422 // TODO: MKPinAnnotationView type has [UnsupportedOSPlatform("macos12.0")], [UnsupportedOSPlatform("ios15.0")], [UnsupportedOSPlatform("tvos15.0")]
 				mapPin = new MKPinAnnotationView(annotation, defaultPinId);
+#pragma warning restore CA1416, CA1422
 				mapPin.CanShowCallout = true;
 			}
 
@@ -279,7 +289,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 				var pin = map.Pins[i];
 				if ((IMKAnnotation)pin.MarkerId == annotation)
 				{
-					targetPin = pin;
+					targetPin = (Pin)pin;
 					break;
 				}
 			}
@@ -339,7 +349,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 
 			var tapPoint = recognizer.LocationInView(Control);
 			var tapGPS = ((MKMapView)Control).ConvertPoint(tapPoint, Control);
-			((Map)Element).SendMapClicked(new Position(tapGPS.Latitude, tapGPS.Longitude));
+			((IMap)Element).Clicked(new Devices.Sensors.Location(tapGPS.Latitude, tapGPS.Longitude));
 		}
 #endif
 
@@ -347,7 +357,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 		{
 			if (_shouldUpdateRegion)
 			{
-				MoveToRegion(((Map)Element).LastMoveToRegion, false);
+				//	MoveToRegion(((Map)Element).LastMoveToRegion, false);
 				_shouldUpdateRegion = false;
 			}
 		}
@@ -382,9 +392,9 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			{
 				annotation.Subtitle = pin.Address;
 			}
-			else if (e.PropertyName == Pin.PositionProperty.PropertyName)
+			else if (e.PropertyName == Pin.LocationProperty.PropertyName)
 			{
-				annotation.Coordinate = new CLLocationCoordinate2D(pin.Position.Latitude, pin.Position.Longitude);
+				annotation.Coordinate = new CLLocationCoordinate2D(pin.Location.Latitude, pin.Location.Longitude);
 			}
 
 		}
@@ -397,12 +407,12 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			var mapModel = (Map)Element;
 			var mkMapView = (MKMapView)Control;
 
-			mapModel.SetVisibleRegion(new MapSpan(new Position(mkMapView.Region.Center.Latitude, mkMapView.Region.Center.Longitude), mkMapView.Region.Span.LatitudeDelta, mkMapView.Region.Span.LongitudeDelta));
+			(mapModel as IMap).VisibleRegion = new MapSpan(new Devices.Sensors.Location(mkMapView.Region.Center.Latitude, mkMapView.Region.Center.Longitude), mkMapView.Region.Span.LatitudeDelta, mkMapView.Region.Span.LongitudeDelta);
 		}
 
 		void MoveToRegion(MapSpan mapSpan, bool animated = true)
 		{
-			Position center = mapSpan.Center;
+			var center = mapSpan.Center;
 			var mapRegion = new MKCoordinateRegion(new CLLocationCoordinate2D(center.Latitude, center.Longitude), new MKCoordinateSpan(mapSpan.LatitudeDegrees, mapSpan.LongitudeDegrees));
 			((MKMapView)Control).SetRegion(mapRegion, animated);
 		}
@@ -447,19 +457,19 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			}
 		}
 
-		void UpdateHasScrollEnabled()
+		void UpdateIsScrollEnabled()
 		{
-			((MKMapView)Control).ScrollEnabled = ((Map)Element).HasScrollEnabled;
+			((MKMapView)Control).ScrollEnabled = ((Map)Element).IsScrollEnabled;
 		}
 
 		void UpdateTrafficEnabled()
 		{
-			((MKMapView)Control).ShowsTraffic = ((Map)Element).TrafficEnabled;
+			((MKMapView)Control).ShowsTraffic = ((Map)Element).IsTrafficEnabled;
 		}
 
-		void UpdateHasZoomEnabled()
+		void UpdateIsZoomEnabled()
 		{
-			((MKMapView)Control).ZoomEnabled = ((Map)Element).HasZoomEnabled;
+			((MKMapView)Control).ZoomEnabled = ((Map)Element).IsZoomEnabled;
 		}
 
 		void UpdateIsShowingUser()
@@ -468,7 +478,9 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			if (((Map)Element).IsShowingUser)
 			{
 				_locationManager = new CLLocationManager();
+#pragma warning disable CA1416 // TODO: 'CLLocationManager.RequestWhenInUseAuthorization()' has [SupportedOSPlatform("macos11.0")]
 				_locationManager.RequestWhenInUseAuthorization();
+#pragma warning restore CA1416
 			}
 #endif
 			((MKMapView)Control).ShowsUserLocation = ((Map)Element).IsShowingUser;
@@ -521,7 +533,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 						}
 					}
 
-					AddMapElements(((Map)Element).MapElements);
+					AddMapElements((IEnumerable<MapElement>)((Map)Element).MapElements);
 					break;
 			}
 		}
@@ -615,7 +627,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			return new MKPolylineRenderer(mkPolyline)
 			{
 #if __MOBILE__
-				StrokeColor = targetPolyline.StrokeColor.ToUIColor(Colors.Black),
+				StrokeColor = targetPolyline.StrokeColor.ToPlatform(Colors.Black),
 #else
 				StrokeColor = targetPolyline.StrokeColor.ToNSColor(Colors.Black),
 #endif
@@ -646,8 +658,8 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			return new MKPolygonRenderer(mkPolygon)
 			{
 #if __MOBILE__
-				StrokeColor = targetPolygon.StrokeColor.ToUIColor(Colors.Black),
-				FillColor = targetPolygon.FillColor.ToUIColor(),
+				StrokeColor = targetPolygon.StrokeColor.ToPlatform(Colors.Black),
+				FillColor = targetPolygon.FillColor.ToPlatform(),
 #else
 				StrokeColor = targetPolygon.StrokeColor.ToNSColor(Colors.Black),
 				FillColor = targetPolygon.FillColor.ToNSColor(),
@@ -679,8 +691,8 @@ namespace Microsoft.Maui.Controls.Compatibility.Maps.MacOS
 			return new MKCircleRenderer(mkCircle)
 			{
 #if __MOBILE__
-				StrokeColor = targetCircle.StrokeColor.ToUIColor(Colors.Black),
-				FillColor = targetCircle.FillColor.ToUIColor(),
+				StrokeColor = targetCircle.StrokeColor.ToPlatform(Colors.Black),
+				FillColor = targetCircle.FillColor.ToPlatform(),
 #else
 				StrokeColor = targetCircle.StrokeColor.ToNSColor(Colors.Black),
 				FillColor = targetCircle.FillColor.ToNSColor(),

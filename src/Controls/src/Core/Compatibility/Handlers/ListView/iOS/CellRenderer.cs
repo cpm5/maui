@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using System.ComponentModel;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
@@ -15,7 +13,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		EventHandler? _onForceUpdateSizeRequested;
 		PropertyChangedEventHandler? _onPropertyChangedEventHandler;
-		readonly UIColor _defaultCellBgColor = PlatformVersion.IsAtLeast(13) ? UIColor.Clear : UIColor.White;
+		readonly UIColor _defaultCellBgColor = (OperatingSystem.IsIOSVersionAtLeast(13) || OperatingSystem.IsTvOSVersionAtLeast(13)) ? UIColor.Clear : UIColor.White;
 
 		public static PropertyMapper<Cell, CellRenderer> Mapper =
 				new PropertyMapper<Cell, CellRenderer>(ElementHandler.ElementMapper);
@@ -48,7 +46,15 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			WireUpForceUpdateSizeRequested(item, tvc, tv);
 
-			tvc.TextLabel.Text = item.ToString();
+			if (OperatingSystem.IsIOSVersionAtLeast(14))
+			{
+				var content = tvc.DefaultContentConfiguration;
+				content.Text = item.ToString();
+			}
+			else
+			{
+				tvc.TextLabel.Text = item.ToString();
+			}
 
 			UpdateBackground(tvc, item);
 
@@ -70,6 +76,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			else
 				tableViewCell.AccessibilityElementsHidden = false;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 			if (cell.IsSet(AutomationProperties.NameProperty))
 				tableViewCell.AccessibilityLabel = cell.GetValue(AutomationProperties.NameProperty).ToString();
 			else
@@ -79,11 +86,22 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				tableViewCell.AccessibilityHint = cell.GetValue(AutomationProperties.HelpTextProperty).ToString();
 			else
 				tableViewCell.AccessibilityHint = null;
+#pragma warning restore CS0618 // Type or member is obsolete
+
 		}
 
 		public virtual void SetBackgroundColor(UITableViewCell tableViewCell, Cell cell, UIColor color)
 		{
-			tableViewCell.TextLabel.BackgroundColor = color;
+			if (OperatingSystem.IsIOSVersionAtLeast(14))
+			{
+				var content = tableViewCell.DefaultContentConfiguration;
+				content.TextProperties.Color = color;
+			}
+			else
+			{
+				tableViewCell.TextLabel.BackgroundColor = color;
+			}
+
 			tableViewCell.ContentView.BackgroundColor = color;
 			tableViewCell.BackgroundColor = color;
 		}

@@ -21,6 +21,7 @@ using Microsoft.Maui.Controls.Compatibility.Platform.UWP;
 using Microsoft.Maui.Controls.Compatibility.Platform.iOS;
 using Microsoft.Maui.Controls.Handlers.Compatibility;
 #elif TIZEN
+using Microsoft.Maui.Controls.Handlers.Compatibility;
 using Microsoft.Maui.Controls.Compatibility.Platform.Tizen;
 #endif
 
@@ -89,21 +90,30 @@ namespace Microsoft.Maui.Controls.Hosting
 			handlersCollection.AddHandler<SwipeItem, SwipeItemMenuItemHandler>();
 			handlersCollection.AddHandler<SwipeView, SwipeViewHandler>();
 
+#pragma warning disable CA1416 //  'MenuBarHandler', MenuFlyoutSubItemHandler, MenuFlyoutSubItemHandler, MenuBarItemHandler is only supported on: 'ios' 13.0 and later
 			handlersCollection.AddHandler<MenuBar, MenuBarHandler>();
 			handlersCollection.AddHandler<MenuFlyoutSubItem, MenuFlyoutSubItemHandler>();
+			handlersCollection.AddHandler<MenuFlyoutSeparator, MenuFlyoutSeparatorHandler>();
 			handlersCollection.AddHandler<MenuFlyoutItem, MenuFlyoutItemHandler>();
 			handlersCollection.AddHandler<MenuBarItem, MenuBarItemHandler>();
+#pragma warning restore CA1416
 
-#if WINDOWS || ANDROID || IOS || MACCATALYST
+#if WINDOWS || ANDROID || IOS || MACCATALYST || TIZEN
 			handlersCollection.AddHandler(typeof(ListView), typeof(Handlers.Compatibility.ListViewRenderer));
+#if !TIZEN
 			handlersCollection.AddHandler(typeof(Cell), typeof(Handlers.Compatibility.CellRenderer));
 			handlersCollection.AddHandler(typeof(ImageCell), typeof(Handlers.Compatibility.ImageCellRenderer));
 			handlersCollection.AddHandler(typeof(EntryCell), typeof(Handlers.Compatibility.EntryCellRenderer));
 			handlersCollection.AddHandler(typeof(TextCell), typeof(Handlers.Compatibility.TextCellRenderer));
 			handlersCollection.AddHandler(typeof(ViewCell), typeof(Handlers.Compatibility.ViewCellRenderer));
 			handlersCollection.AddHandler(typeof(SwitchCell), typeof(Handlers.Compatibility.SwitchCellRenderer));
+#endif
 			handlersCollection.AddHandler(typeof(TableView), typeof(Handlers.Compatibility.TableViewRenderer));
 			handlersCollection.AddHandler(typeof(Frame), typeof(Handlers.Compatibility.FrameRenderer));
+#endif
+
+#if WINDOWS || MACCATALYST
+			handlersCollection.AddHandler(typeof(MenuFlyout), typeof(MenuFlyoutHandler));
 #endif
 
 #if IOS || MACCATALYST
@@ -118,9 +128,11 @@ namespace Microsoft.Maui.Controls.Hosting
 			handlersCollection.AddHandler<Shell, ShellRenderer>();
 #else
 			handlersCollection.AddHandler<Shell, ShellHandler>();
+			handlersCollection.AddHandler<ShellItem, ShellItemHandler>();
+			handlersCollection.AddHandler<ShellSection, ShellSectionHandler>();
 #endif
 #endif
-#if WINDOWS || ANDROID
+#if WINDOWS || ANDROID || TIZEN
 			handlersCollection.AddHandler<NavigationPage, NavigationViewHandler>();
 			handlersCollection.AddHandler<Toolbar, ToolbarHandler>();
 			handlersCollection.AddHandler<FlyoutPage, FlyoutViewHandler>();
@@ -144,12 +156,11 @@ namespace Microsoft.Maui.Controls.Hosting
 			DependencyService.Register<Xaml.ResourcesLoader>();
 			DependencyService.Register<Xaml.ValueConverterProvider>();
 			DependencyService.Register<PlatformSizeService>();
-			DependencyService.Register<PlatformInvalidate>();
 
-#pragma warning disable CS0612 // Type or member is obsolete
+#pragma warning disable CS0612, CA1416 // Type or member is obsolete, 'ResourcesProvider' is unsupported on: 'iOS' 14.0 and later
 			DependencyService.Register<ResourcesProvider>();
 			DependencyService.Register<FontNamedSizeService>();
-#pragma warning restore CS0612 // Type or member is obsolete
+#pragma warning restore CS0612, CA1416 // Type or member is obsolete
 #endif
 
 			builder.ConfigureImageSourceHandlers();
@@ -207,19 +218,27 @@ namespace Microsoft.Maui.Controls.Hosting
 		internal static MauiAppBuilder RemapForControls(this MauiAppBuilder builder)
 		{
 			// Update the mappings for IView/View to work specifically for Controls
+			Application.RemapForControls();
 			VisualElement.RemapForControls();
 			Label.RemapForControls();
 			Button.RemapForControls();
+			CheckBox.RemapForControls();
+			DatePicker.RemapForControls();
 			RadioButton.RemapForControls();
 			FlyoutPage.RemapForControls();
 			Toolbar.RemapForControls();
 			Window.RemapForControls();
 			Editor.RemapForControls();
 			Entry.RemapForControls();
+			Picker.RemapForControls();
 			SearchBar.RemapForControls();
 			TabbedPage.RemapForControls();
+			TimePicker.RemapForControls();
 			Layout.RemapForControls();
+			ScrollView.RemapForControls();
+			RefreshView.RemapForControls();
 			Shape.RemapForControls();
+			WebView.RemapForControls();
 
 			return builder;
 		}

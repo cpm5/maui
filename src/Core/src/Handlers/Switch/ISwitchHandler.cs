@@ -5,8 +5,8 @@ using PlatformView = AndroidX.AppCompat.Widget.SwitchCompat;
 #elif WINDOWS
 using PlatformView = Microsoft.UI.Xaml.Controls.ToggleSwitch;
 #elif TIZEN
-using PlatformView = ElmSharp.Check;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+using PlatformView = Tizen.UIExtensions.NUI.GraphicsView.Switch;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 #endif
 

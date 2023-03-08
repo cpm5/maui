@@ -48,7 +48,12 @@ namespace Microsoft.Maui
 
 			// if there is no scene delegate or support for scene delegates, then we set up the window here
 			if (!this.HasSceneManifest())
+			{
 				this.CreatePlatformWindow(Application, application, launchOptions);
+
+				if (Window != null)
+					Services?.InvokeLifecycleEvents<iOSLifecycle.OnPlatformWindowCreated>(del => del(Window));
+			}
 
 			Services?.InvokeLifecycleEvents<iOSLifecycle.FinishedLaunching>(del => del(application!, launchOptions!));
 
@@ -65,6 +70,8 @@ namespace Microsoft.Maui
 		}
 
 		[Export("application:configurationForConnectingSceneSession:options:")]
+		[System.Runtime.Versioning.SupportedOSPlatform("ios13.1")]
+		[System.Runtime.Versioning.SupportedOSPlatform("tvos13.1")]
 		public virtual UISceneConfiguration GetConfiguration(UIApplication application, UISceneSession connectingSceneSession, UISceneConnectionOptions options)
 			=> new(MauiUIApplicationDelegate.MauiSceneConfigurationKey, connectingSceneSession.Role);
 
@@ -128,6 +135,18 @@ namespace Microsoft.Maui
 		public virtual void WillEnterForeground(UIApplication application)
 		{
 			Services?.InvokeLifecycleEvents<iOSLifecycle.WillEnterForeground>(del => del(application));
+		}
+
+		[Export("applicationSignificantTimeChange:")]
+		public virtual void ApplicationSignificantTimeChange(UIApplication application)
+		{
+			Services?.InvokeLifecycleEvents<iOSLifecycle.ApplicationSignificantTimeChange>(del => del(application));
+		}
+
+		[Export("application:performFetchWithCompletionHandler:")]
+		public virtual void PerformFetch(UIApplication application, Action<UIBackgroundFetchResult> completionHandler)
+		{
+			Services?.InvokeLifecycleEvents<iOSLifecycle.PerformFetch>(del => del(application, completionHandler));
 		}
 
 		public static MauiUIApplicationDelegate Current { get; private set; } = null!;

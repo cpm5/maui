@@ -91,9 +91,12 @@ namespace Microsoft.Maui.ApplicationModel
 		{
 			switch (mode)
 			{
-				case NavigationMode.Bicycling: return "&mode=b";
-				case NavigationMode.Driving: return "&mode=d";
-				case NavigationMode.Walking: return "&mode=w";
+				case NavigationMode.Bicycling:
+					return "&mode=b";
+				case NavigationMode.Driving:
+					return "&mode=d";
+				case NavigationMode.Walking:
+					return "&mode=w";
 			}
 			return string.Empty;
 		}
@@ -123,10 +126,6 @@ namespace Microsoft.Maui.ApplicationModel
 		{
 			var intent = new Intent(Intent.ActionView, AndroidUri.Parse(uri));
 			var flags = ActivityFlags.ClearTop | ActivityFlags.NewTask;
-#if __ANDROID_24__
-			if (OperatingSystem.IsAndroidVersionAtLeast(24))
-				flags |= ActivityFlags.LaunchAdjacent;
-#endif
 			intent.SetFlags(flags);
 
 			return intent;

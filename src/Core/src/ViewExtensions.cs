@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.Maui.Media;
 using System.IO;
-#if NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+#if (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using IPlatformViewHandler = Microsoft.Maui.IViewHandler;
 #endif
 #if IOS || MACCATALYST
@@ -15,8 +15,8 @@ using ParentView = Android.Views.IViewParent;
 using PlatformView = Microsoft.UI.Xaml.FrameworkElement;
 using ParentView = Microsoft.UI.Xaml.DependencyObject;
 #elif TIZEN
-using PlatformView = ElmSharp.EvasObject;
-using ParentView = ElmSharp.EvasObject;
+using PlatformView = Tizen.NUI.BaseComponents.View;
+using ParentView = Tizen.NUI.BaseComponents.View;
 #else
 using PlatformView = System.Object;
 using ParentView = System.Object;
@@ -47,5 +47,28 @@ namespace Microsoft.Maui
 		async static Task<IScreenshotResult?> CaptureAsync(PlatformView window) =>
 			await Screenshot.Default.CaptureAsync(window);
 #endif
+
+#if !TIZEN
+		internal static bool NeedsContainer(this IView? view)
+		{
+			if (view?.Clip != null || view?.Shadow != null)
+				return true;
+
+#if ANDROID
+			if (view?.InputTransparent == true)
+				return true;
+#endif
+
+#if ANDROID || IOS
+			if (view is IBorder border && border.Border != null)
+				return true;
+#elif WINDOWS
+			if (view is IBorderView border)
+				return border?.Shape != null || border?.Stroke != null;
+#endif
+			return false;
+		}
+#endif
+
 	}
 }

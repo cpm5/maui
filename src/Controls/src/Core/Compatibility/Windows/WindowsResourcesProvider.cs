@@ -1,11 +1,12 @@
+#nullable disable
 using System;
-using Windows.UI.Text;
+using Microsoft.Maui.Controls.Internals;
+using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Maui.Controls.Internals;
-using WStyle = Microsoft.UI.Xaml.Style;
-using Microsoft.UI.Text;
+using Windows.UI.Text;
 using FWeight = Windows.UI.Text.FontWeight;
+using WStyle = Microsoft.UI.Xaml.Style;
 
 namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 {
@@ -38,14 +39,14 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 
 			formsStyle.Setters.Add(Label.FontSizeProperty, prototype.FontSize);
 			formsStyle.Setters.Add(Label.FontFamilyProperty, prototype.FontFamily.Source);
-			formsStyle.Setters.Add(Label.FontAttributesProperty, ToAttributes(prototype.FontWeight));			
+			formsStyle.Setters.Add(Label.FontAttributesProperty, ToAttributes(prototype.FontWeight));
 
 			return formsStyle;
 		}
 
 		static FontAttributes ToAttributes(FWeight fontWeight)
 		{
-			if (fontWeight.Weight == FontWeights.Bold.Weight || fontWeight.Weight == FontWeights.SemiBold.Weight 
+			if (fontWeight.Weight == FontWeights.Bold.Weight || fontWeight.Weight == FontWeights.SemiBold.Weight
 				|| fontWeight.Weight == FontWeights.ExtraBold.Weight)
 			{
 				return FontAttributes.Bold;

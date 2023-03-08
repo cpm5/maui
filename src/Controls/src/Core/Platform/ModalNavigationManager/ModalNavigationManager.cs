@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +10,7 @@ namespace Microsoft.Maui.Controls.Platform
 	{
 		Window _window;
 		public IReadOnlyList<Page> ModalStack => _navModel.Modals;
-		IMauiContext MauiContext => _window.MauiContext;
+		IMauiContext WindowMauiContext => _window.MauiContext;
 		NavigationModel _navModel = new NavigationModel();
 		NavigationModel? _previousNavModel = null;
 		Page? _previousPage;

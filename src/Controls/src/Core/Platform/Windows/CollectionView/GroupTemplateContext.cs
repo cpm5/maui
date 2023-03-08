@@ -1,3 +1,4 @@
+#nullable disable
 using System.Collections;
 using System.Collections.Generic;
 
@@ -9,7 +10,7 @@ namespace Microsoft.Maui.Controls.Platform
 		public ItemTemplateContext FooterItemTemplateContext { get; }
 		public object Items { get; }
 
-		public GroupTemplateContext(ItemTemplateContext headerItemTemplateContext, 
+		public GroupTemplateContext(ItemTemplateContext headerItemTemplateContext,
 			ItemTemplateContext footerItemTemplateContext, object items)
 		{
 			HeaderItemTemplateContext = headerItemTemplateContext;

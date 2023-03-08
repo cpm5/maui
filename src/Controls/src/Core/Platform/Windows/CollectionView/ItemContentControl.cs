@@ -1,11 +1,12 @@
+#nullable disable
 using System;
+using Microsoft.Maui.Controls.Internals;
+using Microsoft.Maui.Controls.Platform;
+using Microsoft.Maui.Graphics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Maui.Controls.Internals;
-using WThickness = Microsoft.UI.Xaml.Thickness;
 using WSize = Windows.Foundation.Size;
-using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Controls.Platform;
+using WThickness = Microsoft.UI.Xaml.Thickness;
 
 namespace Microsoft.Maui.Controls.Platform
 {
@@ -18,6 +19,7 @@ namespace Microsoft.Maui.Controls.Platform
 		public ItemContentControl()
 		{
 			DefaultStyleKey = typeof(ItemContentControl);
+			IsTabStop = false;
 		}
 
 		public static readonly DependencyProperty MauiContextProperty = DependencyProperty.Register(
@@ -129,10 +131,17 @@ namespace Microsoft.Maui.Controls.Platform
 			base.OnContentChanged(oldContent, newContent);
 
 			if (oldContent != null && _visualElement != null)
+			{
 				_visualElement.MeasureInvalidated -= OnViewMeasureInvalidated;
+				_visualElement.PropertyChanged -= OnViewPropertyChanged;
+			}
 
 			if (newContent != null && _visualElement != null)
+			{
 				_visualElement.MeasureInvalidated += OnViewMeasureInvalidated;
+				_visualElement.PropertyChanged += OnViewPropertyChanged;
+				UpdateSemanticProperties(_visualElement);
+			}
 		}
 
 		internal void Realize()
@@ -160,7 +169,6 @@ namespace Microsoft.Maui.Controls.Platform
 				// or if we need to switch DataTemplates (because this instance is being recycled)
 				// then we'll need to create the content from the template 
 				_visualElement = formsTemplate.CreateContent(dataContext, container) as VisualElement;
-				_visualElement.BindingContext = dataContext;
 				_renderer = _visualElement.ToHandler(mauiContext);
 
 				// We need to set IsPlatformStateConsistent explicitly; otherwise, it won't be set until the renderer's Loaded 
@@ -178,11 +186,11 @@ namespace Microsoft.Maui.Controls.Platform
 			{
 				// We are reusing this ItemContentControl and we can reuse the Element
 				_visualElement = _renderer.VirtualView as VisualElement;
-				_visualElement.BindingContext = dataContext;
 			}
 
 			Content = _renderer.ToPlatform();
 			itemsView?.AddLogicalChild(_visualElement);
+			_visualElement.BindingContext = dataContext;
 		}
 
 		void SetNativeStateConsistent(VisualElement visualElement)
@@ -217,6 +225,44 @@ namespace Microsoft.Maui.Controls.Platform
 			InvalidateMeasure();
 		}
 
+		void OnViewPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			if (e.IsOneOf(
+				SemanticProperties.HeadingLevelProperty,
+				SemanticProperties.HintProperty,
+				SemanticProperties.DescriptionProperty,
+				AutomationProperties.IsInAccessibleTreeProperty) &&
+				sender is IView view)
+			{
+				UpdateSemanticProperties(view);
+			}
+		}
+
+		void UpdateSemanticProperties(IView view)
+		{
+			// If you don't set the automation properties on the root element
+			// of a list item it just reads out the class type to narrator
+			// https://docs.microsoft.com/en-us/accessibility-tools-docs/items/uwpxaml/listitem_name
+			// Because this is the root element of the ListViewItem we need to propagate
+			// the semantic properties from the root xplat element to this platform element
+			if (view == null)
+				return;
+
+			this.UpdateSemantics(view);
+
+			var semantics = view.Semantics;
+
+			UI.Xaml.Automation.Peers.AccessibilityView defaultAccessibilityView =
+				UI.Xaml.Automation.Peers.AccessibilityView.Content;
+
+			if (!String.IsNullOrWhiteSpace(semantics?.Description) || !String.IsNullOrWhiteSpace(semantics?.Hint))
+			{
+				defaultAccessibilityView = UI.Xaml.Automation.Peers.AccessibilityView.Raw;
+			}
+
+			this.SetAutomationPropertiesAccessibilityView(_visualElement, defaultAccessibilityView);
+		}
+
 		protected override WSize MeasureOverride(WSize availableSize)
 		{
 			if (_renderer == null)
@@ -225,8 +271,8 @@ namespace Microsoft.Maui.Controls.Platform
 			}
 
 			var frameworkElement = Content as FrameworkElement;
-
 			var formsElement = _renderer.VirtualView as VisualElement;
+			var margin = _renderer.VirtualView.Margin;
 
 			if (ItemHeight != default || ItemWidth != default)
 			{
@@ -234,7 +280,12 @@ namespace Microsoft.Maui.Controls.Platform
 
 				var wsize = new WSize(ItemWidth, ItemHeight);
 
-				frameworkElement.Margin = WinUIHelpers.CreateThickness(ItemSpacing.Left, ItemSpacing.Top, ItemSpacing.Right, ItemSpacing.Bottom);
+				frameworkElement.Margin =
+					WinUIHelpers.CreateThickness(
+						margin.Left + ItemSpacing.Left,
+						margin.Top + ItemSpacing.Top,
+						margin.Right + ItemSpacing.Right,
+						margin.Bottom + ItemSpacing.Bottom);
 
 				if (CanMeasureContent(frameworkElement))
 					frameworkElement.Measure(wsize);
@@ -252,6 +303,12 @@ namespace Microsoft.Maui.Controls.Platform
 				formsElement.Layout(new Rect(0, 0, width, height));
 
 				var wsize = new WSize(width, height);
+
+				frameworkElement.Margin = WinUIHelpers.CreateThickness(
+					margin.Left,
+					margin.Top,
+					margin.Right,
+					margin.Bottom);
 
 				if (CanMeasureContent(frameworkElement))
 					frameworkElement.Measure(wsize);

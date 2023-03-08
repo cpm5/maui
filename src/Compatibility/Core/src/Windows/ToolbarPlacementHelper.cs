@@ -1,8 +1,8 @@
 using System;
+using Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;
+using Microsoft.Maui.Devices;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Maui.Devices;
-using Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;
 using WBorder = Microsoft.UI.Xaml.Controls.Border;
 
 namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
@@ -39,7 +39,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 		public void UpdateToolbarPlacement()
 		{
 			if (_commandBar == null || _getToolbarPlacement == null || _bottomCommandBarArea == null ||
-			    _topCommandBarArea == null)
+				_topCommandBarArea == null)
 			{
 				// Template hasn't been applied yet, so we're not ready to update the toolbar placement
 				return;

@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.DeviceTests.Stubs;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Handlers;
@@ -7,7 +8,7 @@ using Xunit;
 namespace Microsoft.Maui.DeviceTests
 {
 	[Category(TestCategory.Editor)]
-	public partial class EditorHandlerTests : HandlerTestBase<EditorHandler, EditorStub>
+	public partial class EditorHandlerTests : CoreHandlerTestBase<EditorHandler, EditorStub>
 	{
 		[Fact(DisplayName = "Text Initializes Correctly")]
 		public async Task TextInitializesCorrectly()
@@ -92,8 +93,8 @@ namespace Microsoft.Maui.DeviceTests
 		}
 
 		[Theory(DisplayName = "PlaceholderColor Updates Correctly")]
-		[InlineData(0xFF0000, 0x0000FF)]
-		[InlineData(0x0000FF, 0xFF0000)]
+		[InlineData(0xFFFF0000, 0xFF0000FF)]
+		[InlineData(0xFF0000FF, 0xFFFF0000)]
 		public async Task PlaceholderColorUpdatesCorrectly(uint setValue, uint unsetValue)
 		{
 			var editor = new EditorStub
@@ -120,7 +121,12 @@ namespace Microsoft.Maui.DeviceTests
 				Text = "Test"
 			};
 
+#if WINDOWS
+			// On Windows, the default value for the Placeholder text is an empty string ("")
+			await ValidatePropertyInitValue(editor, () => editor.Placeholder ?? string.Empty, GetNativePlaceholderText, editor.Placeholder ?? string.Empty);
+#else
 			await ValidatePropertyInitValue(editor, () => editor.Placeholder, GetNativePlaceholderText, editor.Placeholder);
+#endif
 		}
 
 		[Theory]
@@ -183,7 +189,11 @@ namespace Microsoft.Maui.DeviceTests
 			//Assert.Equal(expectedText, editor.Text);
 		}
 
-		[Theory(DisplayName = "MaxLength Clips Native Text Correctly")]
+		[Theory(DisplayName = "MaxLength Clips Native Text Correctly"
+#if WINDOWS
+			, Skip = "https://github.com/dotnet/maui/issues/7939"
+#endif
+		)]
 		[InlineData(2)]
 		[InlineData(5)]
 		[InlineData(8)]
@@ -319,13 +329,20 @@ namespace Microsoft.Maui.DeviceTests
 
 		[Theory(DisplayName = "Validates Text Keyboard")]
 		[InlineData(nameof(Keyboard.Chat), false)]
-		[InlineData(nameof(Keyboard.Default), false)]
 		[InlineData(nameof(Keyboard.Email), false)]
 		[InlineData(nameof(Keyboard.Numeric), false)]
-		[InlineData(nameof(Keyboard.Plain), false)]
 		[InlineData(nameof(Keyboard.Telephone), false)]
 		[InlineData(nameof(Keyboard.Text), true)]
 		[InlineData(nameof(Keyboard.Url), false)]
+#if WINDOWS
+		// The Text keyboard is the default one on Windows
+		[InlineData(nameof(Keyboard.Default), true)]
+		// Plain is the same as the Default keyboard on Windows
+		[InlineData(nameof(Keyboard.Plain), true)]
+#else
+		[InlineData(nameof(Keyboard.Default), false)]
+		[InlineData(nameof(Keyboard.Plain), false)]
+#endif
 		public async Task ValidateTextKeyboard(string keyboardName, bool expected)
 		{
 			var keyboard = (Keyboard)typeof(Keyboard).GetProperty(keyboardName).GetValue(null);
@@ -353,73 +370,35 @@ namespace Microsoft.Maui.DeviceTests
 			await ValidatePropertyInitValue(editor, () => expected, GetNativeIsChatKeyboard, expected);
 		}
 
-		[Theory(DisplayName = "CursorPosition Initializes Correctly")]
-		[InlineData(0)]
-		public async Task CursorPositionInitializesCorrectly(int initialPosition)
+		[Theory(DisplayName = "Vertical TextAlignment Initializes Correctly")]
+		[InlineData(TextAlignment.Start)]
+		[InlineData(TextAlignment.Center)]
+		[InlineData(TextAlignment.End)]
+		public async Task VerticalTextAlignmentInitializesCorrectly(TextAlignment textAlignment)
 		{
 			var editor = new EditorStub
 			{
-				Text = "This is TEXT!",
-				CursorPosition = initialPosition
+				VerticalTextAlignment = textAlignment
 			};
 
-			await ValidatePropertyInitValue(editor, () => editor.CursorPosition, GetNativeCursorPosition, initialPosition);
-		}
+			var platformAlignment = GetNativeVerticalTextAlignment(textAlignment);
 
-		[Theory(DisplayName = "CursorPosition Updates Correctly")]
-		[InlineData(2, 5)]
-		public async Task CursorPositionUpdatesCorrectly(int setValue, int unsetValue)
-		{
-			string text = "This is TEXT!";
+			// attach for windows because it uses control templates
+			var values = await GetValueAsync(editor, (handler) =>
+				handler.PlatformView.AttachAndRun(() =>
+					new
+					{
+						ViewValue = editor.VerticalTextAlignment,
+						PlatformViewValue = GetNativeVerticalTextAlignment(handler)
+					}));
 
-			var editor = new EditorStub
-			{
-				Text = text
-			};
-
-			await ValidatePropertyUpdatesValue(
-				editor,
-				nameof(ITextInput.CursorPosition),
-				GetNativeCursorPosition,
-				setValue,
-				unsetValue
-			);
-		}
-
-		[Theory(DisplayName = "CursorPosition is Capped to Text's Length")]
-		[InlineData(30)]
-		public async Task CursorPositionIsCapped(int initialPosition)
-		{
-			string text = "This is TEXT!";
-
-			var editor = new EditorStub
-			{
-				Text = text,
-				CursorPosition = initialPosition
-			};
-
-			int actualPosition = await GetValueAsync(editor, GetNativeCursorPosition);
-
-			Assert.Equal(text.Length, actualPosition);
+			Assert.Equal(textAlignment, values.ViewValue);
+			Assert.Equal(platformAlignment, values.PlatformViewValue);
 		}
 
 		[Category(TestCategory.Editor)]
-		public class EditorTextInputTests : TextInputHandlerTests<EditorHandler, EditorStub>
+		public class EditorTextStyleTests : TextStyleHandlerTests<EditorHandler, EditorStub>
 		{
-			protected override void SetNativeText(EditorHandler editorHandler, string text)
-			{
-				EditorHandlerTests.SetNativeText(editorHandler, text);
-			}
-
-			protected override int GetCursorStartPosition(EditorHandler editorHandler)
-			{
-				return EditorHandlerTests.GetCursorStartPosition(editorHandler);
-			}
-
-			protected override void UpdateCursorStartPosition(EditorHandler editorHandler, int position)
-			{
-				EditorHandlerTests.UpdateCursorStartPosition(editorHandler, position);
-			}
 		}
 	}
 }

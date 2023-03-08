@@ -1,14 +1,12 @@
 ﻿#nullable enable
-using System;
 using System.Threading.Tasks;
-using Tizen.UIExtensions.Common;
-using Tizen.UIExtensions.ElmSharp;
+using Tizen.UIExtensions.NUI;
 
 namespace Microsoft.Maui.Handlers
 {
 	public partial class ImageHandler : ViewHandler<IImage, Image>
 	{
-		protected override Image CreatePlatformView() => new Image(NativeParent);
+		protected override Image CreatePlatformView() => new Image();
 
 		protected override void DisconnectHandler(Image platformView)
 		{
@@ -36,18 +34,15 @@ namespace Microsoft.Maui.Handlers
 		public static void MapSource(IImageHandler handler, IImage image) =>
 			MapSourceAsync(handler, image).FireAndForget(handler);
 
-		public static Task MapSourceAsync(IImageHandler handler, IImage image)
-		{
-			if (handler.PlatformView == null)
-				return Task.CompletedTask;
+		public static Task MapSourceAsync(IImageHandler handler, IImage image) =>
+			handler.SourceLoader.UpdateImageSourceAsync();
 
-			handler.PlatformView.Clear();
-			return handler.SourceLoader.UpdateImageSourceAsync();
-		}
-
-		void OnSetImageSource(Image? obj)
+		void OnSetImageSource(MauiImageSource? obj)
 		{
-			//Empty on purpose
+			if (obj == null)
+				return;
+
+			PlatformView.ResourceUrl = obj.ResourceUrl;
 		}
 	}
 }

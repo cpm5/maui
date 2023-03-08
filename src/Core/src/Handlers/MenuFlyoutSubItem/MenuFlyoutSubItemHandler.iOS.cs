@@ -8,6 +8,7 @@ using UIKit;
 
 namespace Microsoft.Maui.Handlers
 {
+	[System.Runtime.Versioning.SupportedOSPlatform("ios13.0")]
 	public partial class MenuFlyoutSubItemHandler
 	{
 		protected override UIMenu CreatePlatformElement()
@@ -52,6 +53,10 @@ namespace Microsoft.Maui.Handlers
 
 		void Rebuild()
 		{
+			// For context flyout support this likely also needs some logic like in MenuFlyoutItemHandler.iOS.cs where
+			// it follows one code path for main menus (this existing code), and a different code path for context menus that
+			// rebuilds the UIMenu of the context menu.
+			// https://github.com/dotnet/maui/issues/9359
 			MenuBarHandler.Rebuild();
 		}
 	}

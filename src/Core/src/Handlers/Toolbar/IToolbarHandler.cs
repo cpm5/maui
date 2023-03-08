@@ -5,8 +5,8 @@ using PlatformView = Google.Android.Material.AppBar.MaterialToolbar;
 #elif WINDOWS
 using PlatformView = Microsoft.Maui.Platform.MauiToolbar;
 #elif TIZEN
-using PlatformView =ElmSharp.Toolbar;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+using PlatformView = Microsoft.Maui.Platform.MauiToolbar;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 #endif
 

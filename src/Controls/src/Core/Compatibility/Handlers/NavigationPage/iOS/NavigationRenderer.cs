@@ -1,9 +1,11 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using CoreGraphics;
+using Foundation;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.Platform;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
@@ -40,8 +42,10 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		public static CommandMapper<NavigationPage, NavigationRenderer> CommandMapper = new CommandMapper<NavigationPage, NavigationRenderer>(ViewHandler.ViewCommandMapper);
 		ViewHandlerDelegator<NavigationPage> _viewHandlerWrapper;
 		bool _navigating = false;
+		VisualElement _element;
+		bool _uiRequestedPop; // User tapped the back button or swiped to navigate back
 
-		[Preserve(Conditional = true)]
+		[Internals.Preserve(Conditional = true)]
 		public NavigationRenderer() : base(typeof(MauiControlsNavigationBar), null)
 		{
 			_viewHandlerWrapper = new ViewHandlerDelegator<NavigationPage>(Mapper, CommandMapper, this);
@@ -56,7 +60,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		NavigationPage NavPage => Element as NavigationPage;
 		INavigationPageController NavPageController => NavPage;
 
-		public VisualElement Element { get => _viewHandlerWrapper.Element; }
+		public VisualElement Element { get => _viewHandlerWrapper.Element ?? _element; }
 
 		public event EventHandler<VisualElementChangedEventArgs> ElementChanged;
 
@@ -74,6 +78,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		public void SetElement(VisualElement element)
 		{
 			(this as IElementHandler).SetVirtualView(element);
+			_element = element;
 		}
 
 		public UIViewController ViewController
@@ -82,6 +87,8 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		}
 
 		//TODO: this was deprecated in iOS8.0 and is not called in 9.0+
+		[System.Runtime.Versioning.UnsupportedOSPlatform("ios8.0")]
+		[System.Runtime.Versioning.UnsupportedOSPlatform("tvos")]
 		public override void DidRotate(UIInterfaceOrientation fromInterfaceOrientation)
 		{
 			base.DidRotate(fromInterfaceOrientation);
@@ -204,7 +211,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			UpdateHideNavigationBarSeparator();
 			UpdateUseLargeTitles();
 
-			if (PlatformVersion.Supports(PlatformApis.RespondsToSetNeedsUpdateOfHomeIndicatorAutoHidden))
+			if (OperatingSystem.IsIOSVersionAtLeast(11))
 				SetNeedsUpdateOfHomeIndicatorAutoHidden();
 
 			// If there is already stuff on the stack we need to push it
@@ -331,7 +338,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		{
 			base.TraitCollectionDidChange(previousTraitCollection);
 			// Make sure the control adheres to changes in UI theme
-			if (PlatformVersion.IsAtLeast(13) && previousTraitCollection?.UserInterfaceStyle != TraitCollection.UserInterfaceStyle)
+			if (OperatingSystem.IsIOSVersionAtLeast(13) && previousTraitCollection?.UserInterfaceStyle != TraitCollection.UserInterfaceStyle)
 				UpdateBackgroundColor();
 		}
 
@@ -466,7 +473,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			if (_defaultNavBarShadowImage == null)
 				_defaultNavBarShadowImage = NavigationBar.ShadowImage;
 
-			if (PlatformVersion.IsAtLeast(13))
+			if (OperatingSystem.IsIOSVersionAtLeast(13) || OperatingSystem.IsMacCatalystVersionAtLeast(13))
 			{
 				if (shouldHide)
 				{
@@ -489,7 +496,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 					NavigationBar.ShadowImage = _defaultNavBarShadowImage;
 			}
 
-			if (!PlatformVersion.IsAtLeast(11))
+			if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11)))
 			{
 				// For iOS 10 and lower, you need to set the background image.
 				// If you set this for iOS11, you'll remove the background color.
@@ -513,7 +520,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		void UpdateUseLargeTitles()
 		{
-			if (PlatformVersion.IsAtLeast(11) && NavPage != null)
+			if (OperatingSystem.IsIOSVersionAtLeast(11) && NavPage != null)
 				NavigationBar.PrefersLargeTitles = NavPage.OnThisPlatform().PrefersLargeTitles();
 		}
 
@@ -628,7 +635,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		{
 			var barBackgroundColor = NavPage.BarBackgroundColor;
 
-			if (PlatformVersion.IsAtLeast(13))
+			if (OperatingSystem.IsIOSVersionAtLeast(13) || OperatingSystem.IsMacCatalystVersionAtLeast(13))
 			{
 				var navigationBarAppearance = NavigationBar.StandardAppearance;
 
@@ -679,7 +686,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			// Determine new large title text attributes via global static data
 			var largeTitleTextAttributes = titleTextAttributes;
-			if (PlatformVersion.IsAtLeast(11))
+			if (OperatingSystem.IsIOSVersionAtLeast(11))
 			{
 				var globalLargeTitleTextAttributes = UINavigationBar.Appearance.LargeTitleTextAttributes;
 
@@ -690,7 +697,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				};
 			}
 
-			if (PlatformVersion.IsAtLeast(13))
+			if (OperatingSystem.IsIOSVersionAtLeast(13))
 			{
 				NavigationBar.CompactAppearance.TitleTextAttributes = titleTextAttributes;
 				NavigationBar.CompactAppearance.LargeTitleTextAttributes = largeTitleTextAttributes;
@@ -705,7 +712,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			{
 				NavigationBar.TitleTextAttributes = titleTextAttributes;
 
-				if (PlatformVersion.IsAtLeast(11))
+				if (OperatingSystem.IsIOSVersionAtLeast(11))
 					NavigationBar.LargeTitleTextAttributes = largeTitleTextAttributes;
 			}
 
@@ -724,10 +731,11 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			var barTextColor = NavPage.BarTextColor;
 			var statusBarColorMode = NavPage.OnThisPlatform().GetStatusBarTextColorMode();
 
+#pragma warning disable CA1416, CA1422 // TODO:   'UIApplication.StatusBarStyle' is unsupported on: 'ios' 9.0 and later
 			if (statusBarColorMode == StatusBarTextColorMode.DoNotAdjust || barTextColor?.GetLuminosity() <= 0.5)
 			{
 				// Use dark text color for status bar
-				if (PlatformVersion.IsAtLeast(13))
+				if (OperatingSystem.IsIOSVersionAtLeast(13) || OperatingSystem.IsMacCatalystVersionAtLeast(13))
 				{
 					UIApplication.SharedApplication.StatusBarStyle = UIStatusBarStyle.DarkContent;
 				}
@@ -741,6 +749,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				// Use light text color for status bar
 				UIApplication.SharedApplication.StatusBarStyle = UIStatusBarStyle.LightContent;
 			}
+#pragma warning restore CA1416, CA1422
 		}
 
 		void UpdateToolBarVisible()
@@ -773,7 +782,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			TopViewController?.NavigationItem?.TitleView?.LayoutSubviews();
 		}
 
-		internal async Task UpdateFormsInnerNavigation(Page pageBeingRemoved)
+		async Task UpdateFormsInnerNavigation(Page pageBeingRemoved)
 		{
 			if (NavPage == null)
 				return;
@@ -782,9 +791,24 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			_ignorePopCall = true;
 			if (Element.Navigation.NavigationStack.Contains(pageBeingRemoved))
+			{
 				await (NavPage as INavigationPageController)?.RemoveAsyncInner(pageBeingRemoved, false, true);
-			_ignorePopCall = false;
+				if (_uiRequestedPop)
+				{
+					NavPage?.SendNavigatedFromHandler(pageBeingRemoved);
+				}
+			}
 
+			_ignorePopCall = false;
+			_uiRequestedPop = false;
+		}
+
+		[Export("navigationBar:shouldPopItem:")]
+		[Internals.Preserve(Conditional = true)]
+		internal bool ShouldPopItem(UINavigationBar _, UINavigationItem __)
+		{
+			_uiRequestedPop = true;
+			return true;
 		}
 
 		internal static void SetFlyoutLeftBarButton(UIViewController containerController, FlyoutPage FlyoutPage)
@@ -837,7 +861,9 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			if (_defaultAccessibilityHint == null)
 				_defaultAccessibilityHint = uIBarButtonItem.AccessibilityHint;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 			uIBarButtonItem.AccessibilityHint = (string)element.GetValue(AutomationProperties.HelpTextProperty) ?? _defaultAccessibilityHint;
+#pragma warning restore CS0618 // Type or member is obsolete
 		}
 
 		static void SetAccessibilityLabel(UIBarButtonItem uIBarButtonItem, Element element)
@@ -848,7 +874,9 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			if (_defaultAccessibilityLabel == null)
 				_defaultAccessibilityLabel = uIBarButtonItem.AccessibilityLabel;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 			uIBarButtonItem.AccessibilityLabel = (string)element.GetValue(AutomationProperties.NameProperty) ?? _defaultAccessibilityLabel;
+#pragma warning restore CS0618 // Type or member is obsolete
 		}
 
 		static void SetIsAccessibilityElement(UIBarButtonItem uIBarButtonItem, Element element)
@@ -952,7 +980,9 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		class MauiNavigationDelegate : UINavigationControllerDelegate
 		{
+			bool _finishedWithInitialNavigation;
 			readonly WeakReference<NavigationRenderer> _navigation;
+
 			public MauiNavigationDelegate(NavigationRenderer navigationRenderer)
 			{
 				_navigation = new WeakReference<NavigationRenderer>(navigationRenderer);
@@ -966,6 +996,12 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 					if (r.VisibleViewController is ParentingViewController pvc)
 					{
 						pvc.UpdateFrames();
+					}
+
+					if (r.Element is NavigationPage np && !_finishedWithInitialNavigation)
+					{
+						_finishedWithInitialNavigation = true;
+						np.SendNavigatedFromHandler(null);
 					}
 				}
 			}
@@ -989,7 +1025,9 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			public ParentingViewController(NavigationRenderer navigation)
 			{
+#pragma warning disable CA1416, CA1422 // TODO: 'UIViewController.AutomaticallyAdjustsScrollViewInsets' is unsupported on: 'ios' 11.0 and later
 				AutomaticallyAdjustsScrollViewInsets = false;
+#pragma warning restore CA1416, CA1422
 
 				_navigation = new WeakReference<NavigationRenderer>(navigation);
 			}
@@ -1018,6 +1056,8 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			public event EventHandler Appearing;
 
+			[System.Runtime.Versioning.UnsupportedOSPlatform("ios8.0")]
+			[System.Runtime.Versioning.UnsupportedOSPlatform("tvos")]
 			public override void DidRotate(UIInterfaceOrientation fromInterfaceOrientation)
 			{
 				base.DidRotate(fromInterfaceOrientation);
@@ -1181,7 +1221,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			internal void SetupDefaultNavigationBarAppearance()
 			{
-				if (!PlatformVersion.IsAtLeast(13))
+				if (!(OperatingSystem.IsIOSVersionAtLeast(13) || OperatingSystem.IsMacCatalystVersionAtLeast(13)))
 					return;
 
 				if (!_navigation.TryGetTarget(out NavigationRenderer navigationRenderer))
@@ -1297,7 +1337,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 				// on iOS 10 if the user hasn't set the back button text
 				// we set it to an empty string so it's consistent with iOS 11
-				if (!PlatformVersion.IsAtLeast(11) && !isBackButtonTextSet)
+				if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11)) && !isBackButtonTextSet)
 					backButtonText = "";
 
 				// First page and we have a flyout detail to contend with
@@ -1383,7 +1423,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				if (!_navigation.TryGetTarget(out n))
 					return;
 
-				if (!PlatformVersion.IsAtLeast(11) || n._parentFlyoutPage != null)
+				if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11)) || n._parentFlyoutPage != null)
 					UpdateTitleArea(Child);
 			}
 
@@ -1445,7 +1485,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			void UpdateLargeTitles()
 			{
 				var page = Child;
-				if (page != null && PlatformVersion.IsAtLeast(11))
+				if (page != null && OperatingSystem.IsIOSVersionAtLeast(11))
 				{
 					var largeTitleDisplayMode = page.OnThisPlatform().LargeTitleDisplay();
 					switch (largeTitleDisplayMode)
@@ -1476,14 +1516,18 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 					return ivh.ViewController.PreferredInterfaceOrientationForPresentation();
 				return base.PreferredInterfaceOrientationForPresentation();
 			}
-
+#pragma warning disable CA1422 // Validate platform compatibility
 			public override bool ShouldAutorotate()
 			{
 				if (Child?.Handler is IPlatformViewHandler ivh)
+
 					return ivh.ViewController.ShouldAutorotate();
 				return base.ShouldAutorotate();
 			}
+#pragma warning restore CA1422 // Validate platform compatibility
 
+			[System.Runtime.Versioning.UnsupportedOSPlatform("ios6.0")]
+			[System.Runtime.Versioning.UnsupportedOSPlatform("tvos")]
 			public override bool ShouldAutorotateToInterfaceOrientation(UIInterfaceOrientation toInterfaceOrientation)
 			{
 				if (Child?.Handler is IPlatformViewHandler ivh)
@@ -1546,6 +1590,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		void IElementHandler.SetVirtualView(Maui.IElement view)
 		{
 			_viewHandlerWrapper.SetVirtualView(view, ElementChanged, false);
+			_element = view as VisualElement;
 
 			void ElementChanged(ElementChangedEventArgs<NavigationPage> e)
 			{
@@ -1604,7 +1649,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			public override void LayoutSubviews()
 			{
-				if (!PlatformVersion.IsAtLeast(11))
+				if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11)))
 				{
 					for (int i = 0; i < this.Subviews.Length; i++)
 					{
@@ -1644,7 +1689,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			public Container(View view, UINavigationBar bar) : base(bar.Bounds)
 			{
-				if (PlatformVersion.IsAtLeast(11))
+				if (OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11))
 				{
 					TranslatesAutoresizingMaskIntoConstraints = false;
 				}
@@ -1691,7 +1736,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				{
 					if (Superview != null)
 					{
-						if (!PlatformVersion.IsAtLeast(11))
+						if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11)))
 						{
 							value.Y = Superview.Bounds.Y;
 

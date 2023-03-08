@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
+using Microsoft.Maui.Controls.Internals;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Maui.Controls.Internals;
 using WVisibility = Microsoft.UI.Xaml.Visibility;
 
 namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
@@ -59,7 +59,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 			RightBtn.Visibility = RightBtn.Content == null ? WVisibility.Collapsed : WVisibility.Visible;
 		}
 
-		void ListItemSelected (object sender, ItemClickEventArgs e)
+		void ListItemSelected(object sender, ItemClickEventArgs e)
 		{
 			var selection = (string)e.ClickedItem;
 			options.SetResult(selection);

@@ -1,7 +1,6 @@
 ﻿using System;
 using Android.Views;
 using AndroidX.Core.View;
-using AndroidX.Core.Widget;
 using PlatformView = Android.Views.View;
 
 namespace Microsoft.Maui.Handlers
@@ -96,7 +95,9 @@ namespace Microsoft.Maui.Handlers
 			if (handler.PlatformView == null)
 				return;
 
-			var accessibilityDelegate = ViewCompat.GetAccessibilityDelegate(handler.PlatformView as View) as MauiAccessibilityDelegateCompat;
+			AccessibilityDelegateCompat? accessibilityDelegate = null;
+			if (handler.PlatformView is View viewPlatform)
+				accessibilityDelegate = ViewCompat.GetAccessibilityDelegate(viewPlatform) as MauiAccessibilityDelegateCompat;
 
 			if (handler.PlatformView is not PlatformView platformView)
 				return;
@@ -179,13 +180,8 @@ namespace Microsoft.Maui.Handlers
 			appbarLayout.AddView(nativeToolBar, 0);
 		}
 
-		public virtual bool NeedsContainer
+		public static void MapContextFlyout(IViewHandler handler, IView view)
 		{
-			get
-			{
-				return VirtualView?.Clip != null || VirtualView?.Shadow != null
-					|| (VirtualView as IBorder)?.Border != null || VirtualView?.InputTransparent == true;
-			}
 		}
 
 		void OnPlatformViewFocusChange(object? sender, PlatformView.FocusChangeEventArgs e)

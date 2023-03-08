@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using CoreGraphics;
 using Foundation;
@@ -9,7 +10,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 {
 	public class CarouselTemplatedCell : TemplatedCell
 	{
-		public static NSString ReuseId = new NSString("Microsoft.Maui.Controls.Compatibility.Platform.iOS.CarouselTemplatedCell");
+		public static NSString ReuseId = new NSString("Microsoft.Maui.Controls.CarouselTemplatedCell");
 		CGSize _constraint;
 
 		[Export("initWithFrame:")]

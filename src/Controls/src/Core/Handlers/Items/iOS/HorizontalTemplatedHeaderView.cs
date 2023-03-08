@@ -1,3 +1,4 @@
+#nullable disable
 using CoreGraphics;
 using Foundation;
 using ObjCRuntime;
@@ -7,7 +8,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 {
 	internal sealed class HorizontalSupplementaryView : HeightConstrainedTemplatedCell
 	{
-		public static NSString ReuseId = new NSString("Microsoft.Maui.Controls.Compatibility.Platform.iOS.HorizontalSupplementaryView");
+		public static NSString ReuseId = new NSString("Microsoft.Maui.Controls.HorizontalSupplementaryView");
 
 		[Export("initWithFrame:")]
 		[Microsoft.Maui.Controls.Internals.Preserve(Conditional = true)]

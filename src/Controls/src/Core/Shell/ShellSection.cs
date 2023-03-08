@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -10,13 +11,13 @@ using Microsoft.Maui.Controls.Internals;
 
 namespace Microsoft.Maui.Controls
 {
-	/// <include file="../../../docs/Microsoft.Maui.Controls/Tab.xml" path="Type[@FullName='Microsoft.Maui.Controls.Tab']/Docs" />
+	/// <include file="../../../docs/Microsoft.Maui.Controls/Tab.xml" path="Type[@FullName='Microsoft.Maui.Controls.Tab']/Docs/*" />
 	[EditorBrowsable(EditorBrowsableState.Always)]
 	public class Tab : ShellSection
 	{
 	}
 
-	/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="Type[@FullName='Microsoft.Maui.Controls.ShellSection']/Docs" />
+	/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="Type[@FullName='Microsoft.Maui.Controls.ShellSection']/Docs/*" />
 	[ContentProperty(nameof(Items))]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public partial class ShellSection : ShellGroupItem, IShellSectionController, IPropertyPropagationController, IVisualTreeElement
@@ -25,7 +26,7 @@ namespace Microsoft.Maui.Controls
 
 		static readonly BindablePropertyKey ItemsPropertyKey =
 			BindableProperty.CreateReadOnly(nameof(Items), typeof(ShellContentCollection), typeof(ShellSection), null,
-				defaultValueCreator: bo => new ShellContentCollection());
+				defaultValueCreator: bo => new ShellContentCollection() { Inner = new ElementCollection<ShellContent>(((ShellSection)bo).DeclaredChildren) });
 
 		#endregion PropertyKeys
 
@@ -119,6 +120,8 @@ namespace Microsoft.Maui.Controls
 			await poppingCompleted;
 
 			RemovePage(page);
+
+			(Parent?.Parent as IShellController)?.UpdateCurrentState(ShellNavigationSource.Pop);
 		}
 
 		async void IShellSectionController.SendPoppingToRoot(Task finishedPopping)
@@ -137,6 +140,8 @@ namespace Microsoft.Maui.Controls
 
 			for (int i = 1; i < oldStack.Count; i++)
 				RemovePage(oldStack[i]);
+
+			(Parent?.Parent as IShellController)?.UpdateCurrentState(ShellNavigationSource.PopToRoot);
 		}
 
 		[Obsolete]
@@ -193,24 +198,20 @@ namespace Microsoft.Maui.Controls
 		}
 		#endregion
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='CurrentItemProperty']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='CurrentItemProperty']/Docs/*" />
 		public static readonly BindableProperty CurrentItemProperty =
 			BindableProperty.Create(nameof(CurrentItem), typeof(ShellContent), typeof(ShellSection), null, BindingMode.TwoWay,
 				propertyChanged: OnCurrentItemChanged);
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='ItemsProperty']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='ItemsProperty']/Docs/*" />
 		public static readonly BindableProperty ItemsProperty = ItemsPropertyKey.BindableProperty;
 
 		Page _displayedPage;
-		IList<Element> _logicalChildren = new List<Element>();
-
-		ReadOnlyCollection<Element> _logicalChildrenReadOnly;
-
 		List<Page> _navStack = new List<Page> { null };
 		internal bool IsPushingModalStack { get; private set; }
 		internal bool IsPoppingModalStack { get; private set; }
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='.ctor']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='.ctor']/Docs/*" />
 		public ShellSection()
 		{
 			((ShellElementCollection)Items).VisibleItemsChangedInternal += (_, args) =>
@@ -234,26 +235,22 @@ namespace Microsoft.Maui.Controls
 				SendStructureChanged();
 			};
 
-			(Items as INotifyCollectionChanged).CollectionChanged += ItemsCollectionChanged;
-
 			Navigation = new NavigationImpl(this);
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='CurrentItem']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='CurrentItem']/Docs/*" />
 		public ShellContent CurrentItem
 		{
 			get { return (ShellContent)GetValue(CurrentItemProperty); }
 			set { SetValue(CurrentItemProperty, value); }
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='Items']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='Items']/Docs/*" />
 		public IList<ShellContent> Items => (IList<ShellContent>)GetValue(ItemsProperty);
 		internal override ShellElementCollection ShellElementCollection => (ShellElementCollection)Items;
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='Stack']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/ShellSection.xml" path="//Member[@MemberName='Stack']/Docs/*" />
 		public IReadOnlyList<Page> Stack => _navStack;
-
-		internal override IReadOnlyList<Element> LogicalChildrenInternal => _logicalChildrenReadOnly ?? (_logicalChildrenReadOnly = new ReadOnlyCollection<Element>(_logicalChildren));
 
 		internal Page DisplayedPage
 		{
@@ -410,6 +407,11 @@ namespace Microsoft.Maui.Controls
 							if (!isLast)
 								continue;
 						}
+
+						// This is the page that we will eventually get to once we've finished
+						// modifying the existing navigation stack
+						// So we want to fire appearing on it						
+						navPage.SendAppearing();
 
 						IsPoppingModalStack = true;
 
@@ -651,6 +653,14 @@ namespace Microsoft.Maui.Controls
 			}
 		}
 
+		protected override void OnParentSet()
+		{
+			base.OnParentSet();
+
+			if (this.IsVisibleSection)
+				SendAppearanceChanged();
+		}
+
 		protected override void OnChildAdded(Element child)
 		{
 			base.OnChildAdded(child);
@@ -659,7 +669,7 @@ namespace Microsoft.Maui.Controls
 
 		protected override void OnChildRemoved(Element child, int oldLogicalIndex)
 		{
-			if (child is IShellContentController sc && sc.Page.IsPlatformEnabled)
+			if (child is IShellContentController sc && (sc.Page?.IsPlatformEnabled == true))
 			{
 				sc.Page.PlatformEnabledChanged += WaitForRendererToGetRemoved;
 				void WaitForRendererToGetRemoved(object s, EventArgs p)
@@ -702,9 +712,6 @@ namespace Microsoft.Maui.Controls
 
 			UpdateDisplayedPage();
 		}
-
-		internal override IEnumerable<Element> ChildrenNotDrawnByThisElement => Items;
-
 
 		void InvokeNavigationRequest(NavigationRequestedEventArgs args)
 		{
@@ -960,7 +967,8 @@ namespace Microsoft.Maui.Controls
 					}
 					else
 					{
-						presentedPage.SendAppearing();
+
+						this.FindParentOfType<Shell>().SendPageAppearing(presentedPage);
 					}
 				}
 			}
@@ -993,35 +1001,12 @@ namespace Microsoft.Maui.Controls
 
 		void AddPage(Page page)
 		{
-			_logicalChildren.Add(page);
-			OnChildAdded(page);
-		}
-
-		void ItemsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-		{
-			if (e.NewItems != null)
-			{
-				foreach (Element element in e.NewItems)
-					OnChildAdded(element);
-			}
-
-			if (e.OldItems != null)
-			{
-				for (var i = 0; i < e.OldItems.Count; i++)
-				{
-					var element = (Element)e.OldItems[i];
-					OnChildRemoved(element, e.OldStartingIndex + i);
-				}
-			}
+			AddLogicalChild(page);
 		}
 
 		void RemovePage(Page page)
 		{
-			if (!_logicalChildren.Contains(page))
-				return;
-			var index = _logicalChildren.IndexOf(page);
-			_logicalChildren.Remove(page);
-			OnChildRemoved(page, index);
+			RemoveLogicalChild(page);
 		}
 
 		void SendAppearanceChanged() => ((IShellController)Parent?.Parent)?.AppearanceChanged(this, false);

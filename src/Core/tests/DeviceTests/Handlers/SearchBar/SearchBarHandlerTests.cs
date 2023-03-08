@@ -7,8 +7,29 @@ using Xunit;
 namespace Microsoft.Maui.DeviceTests
 {
 	[Category(TestCategory.SearchBar)]
-	public partial class SearchBarHandlerTests : HandlerTestBase<SearchBarHandler, SearchBarStub>
+	public partial class SearchBarHandlerTests : CoreHandlerTestBase<SearchBarHandler, SearchBarStub>
 	{
+		[Theory(DisplayName = "Background Initializes Correctly"
+#if IOS
+			, Skip = "This test is currently invalid on iOS https://github.com/dotnet/maui/issues/13693"
+#endif
+			)]
+		[InlineData(0xFFFF0000)]
+		[InlineData(0xFF00FF00)]
+		[InlineData(0xFF0000FF)]
+		public async Task BackgroundInitializesCorrectly(uint color)
+		{
+			var expected = Color.FromUint(color);
+
+			var searchBar = new SearchBarStub
+			{
+				Background = new SolidPaintStub(expected),
+				Text = "Background",
+			};
+
+			await ValidateHasColor(searchBar, expected);
+		}
+
 		[Fact(DisplayName = "Text Initializes Correctly")]
 		public async Task TextInitializesCorrectly()
 		{
@@ -99,15 +120,21 @@ namespace Microsoft.Maui.DeviceTests
 			Assert.Equal(expectedText, platformText);
 		}
 
-		[Fact(DisplayName = "CancelButtonColor Initialize Correctly")]
+		[Fact(DisplayName = "CancelButtonColor Initialize Correctly"
+#if WINDOWS
+			, Skip = "This test currently fails on Windows due to https://github.com/dotnet/maui/issues/13507"
+#endif
+			)]
 		public async Task CancelButtonColorInitializeCorrectly()
 		{
 			var searchBar = new SearchBarStub()
 			{
-				CancelButtonColor = Colors.MediumPurple
+				Text = "Search",
+				Width = 200,
+				CancelButtonColor = Colors.Yellow,
 			};
 
-			await ValidateHasColor(searchBar, Colors.MediumPurple, () => searchBar.CancelButtonColor = Colors.MediumPurple);
+			await ValidateHasColor(searchBar, Colors.Yellow);
 		}
 
 		[Fact(DisplayName = "Null Cancel Button Color Doesn't Crash")]
@@ -121,6 +148,27 @@ namespace Microsoft.Maui.DeviceTests
 			await CreateHandlerAsync(searchBar);
 		}
 
+		[Fact(DisplayName = "Default Input Field is at least 44dp high")]
+		public async Task DefaultInputFieldIsAtLeast44DpHigh()
+		{
+			var searchBar = new SearchBarStub()
+			{
+				Text = "search bar text",
+				Width = 200
+			};
+
+			await InvokeOnMainThreadAsync(async () =>
+			{
+				var handler = CreateHandler(searchBar);
+				await AssertionExtensions.AttachAndRun(handler.PlatformView, () =>
+				{
+					var height = GetInputFieldHeight(handler);
+					Assert.True(height >= 44);
+				});
+			});
+		}
+
+#if !WINDOWS
 		[Theory]
 		[InlineData(true)]
 		[InlineData(false)]
@@ -152,6 +200,12 @@ namespace Microsoft.Maui.DeviceTests
 			{
 				SearchBarHandlerTests.UpdateCursorStartPosition(searchBarHandler, position);
 			}
+		}
+#endif
+
+		[Category(TestCategory.SearchBar)]
+		public class SearchBarTextStyleTests : TextStyleHandlerTests<SearchBarHandler, SearchBarStub>
+		{
 		}
 	}
 }

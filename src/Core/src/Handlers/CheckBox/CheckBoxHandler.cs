@@ -6,8 +6,8 @@ using PlatformView = AndroidX.AppCompat.Widget.AppCompatCheckBox;
 #elif WINDOWS
 using PlatformView = Microsoft.UI.Xaml.Controls.CheckBox;
 #elif TIZEN
-using PlatformView = ElmSharp.Check;
-#elif NETSTANDARD
+using PlatformView = Tizen.UIExtensions.NUI.GraphicsView.CheckBox;
+#elif (NETSTANDARD || !PLATFORM)
 using PlatformView = System.Object;
 #endif
 
@@ -33,9 +33,14 @@ namespace Microsoft.Maui.Handlers
 
 		}
 
-		public CheckBoxHandler(IPropertyMapper mapper) : base(mapper ?? Mapper)
+		public CheckBoxHandler(IPropertyMapper? mapper)
+			: base(mapper ?? Mapper, CommandMapper)
 		{
+		}
 
+		public CheckBoxHandler(IPropertyMapper? mapper, CommandMapper? commandMapper)
+			: base(mapper ?? Mapper, commandMapper ?? CommandMapper)
+		{
 		}
 
 		ICheckBox ICheckBoxHandler.VirtualView => VirtualView;

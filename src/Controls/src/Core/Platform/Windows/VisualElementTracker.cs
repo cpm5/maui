@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,25 +5,25 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Windows.ApplicationModel.DataTransfer;
-using Windows.Graphics.Imaging;
-using Windows.Storage.Streams;
+using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Controls.Internals;
+using Microsoft.Maui.Graphics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.Maui.Controls.Internals;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Graphics.Imaging;
+using Windows.Storage.Streams;
 using WCompositeTransform = Microsoft.UI.Xaml.Media.CompositeTransform;
 using WScaleTransform = Microsoft.UI.Xaml.Media.ScaleTransform;
-using Microsoft.Maui.Graphics;
 using WVisibility = Microsoft.UI.Xaml.Visibility;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Maui.Controls.Platform
 {
-	// TODO MAUI: can we convert this over to using IView
+	[Obsolete("VisualElementTracker is obsolete as of .NET 7. This behavior has been built into ViewHandler and is included by default on anything that inherits from `Microsoft.Maui.Controls.View`. If something is missing for you please log an issue. In the mean time, you can try using Microsoft.Maui.Controls.Compatibility.Platform.UWP.VisualElementTracker")]
 	public class VisualElementTracker<TElement, TPlatformElement> : IDisposable where TElement : VisualElement where TPlatformElement : FrameworkElement
 	{
 		readonly NotifyCollectionChangedEventHandler _collectionChangedHandler;
@@ -152,7 +150,7 @@ namespace Microsoft.Maui.Controls.Platform
 
 			SendEventArgs<DropGestureRecognizer>(rec =>
 			{
-				if(!rec.AllowDrop)
+				if (!rec.AllowDrop)
 				{
 					e.AcceptedOperation = global::Windows.ApplicationModel.DataTransfer.DataPackageOperation.None;
 					return;
@@ -212,7 +210,7 @@ namespace Microsoft.Maui.Controls.Platform
 					{
 						e.Data.SetBitmap(RandomAccessStreamReference.CreateFromUri(bi.UriSource));
 					}
-					else if(!String.IsNullOrWhiteSpace(args.Data.Text))
+					else if (!String.IsNullOrWhiteSpace(args.Data.Text))
 					{
 						Uri? uri;
 						if (Uri.TryCreate(args.Data.Text, UriKind.Absolute, out uri))
@@ -254,7 +252,7 @@ namespace Microsoft.Maui.Controls.Platform
 						oldRecognizers.CollectionChanged -= _collectionChangedHandler;
 						var gestures = (view as IGestureController)?.CompositeGestureRecognizers as ObservableCollection<IGestureRecognizer>;
 
-						if(gestures != null)
+						if (gestures != null)
 							gestures.CollectionChanged -= _collectionChangedHandler;
 					}
 				}
@@ -818,7 +816,7 @@ namespace Microsoft.Maui.Controls.Platform
 				_container.DropCompleted += HandleDropCompleted;
 			}
 
-			if(_container.AllowDrop)
+			if (_container.AllowDrop)
 			{
 				_container.DragOver += HandleDragOver;
 				_container.Drop += HandleDrop;
@@ -875,7 +873,7 @@ namespace Microsoft.Maui.Controls.Platform
 			//We can't handle ManipulationMode.Scale and System , so we don't support pinch/pan on a scrollview 
 			if (Element is ScrollView)
 			{
-				var logger = Application.Current?.FindMauiContext()?.CreateLogger<GestureManager>();
+				var logger = Application.Current?.FindMauiContext()?.CreateLogger<GesturePlatformManager>();
 
 				if (hasPinchGesture)
 					logger?.LogWarning("PinchGestureRecognizer is not supported on a ScrollView in Windows Platforms");

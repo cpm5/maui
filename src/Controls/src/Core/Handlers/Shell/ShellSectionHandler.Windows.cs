@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Maui.Controls.Internals;
@@ -9,7 +7,7 @@ using WFrame = Microsoft.UI.Xaml.Controls.Frame;
 
 namespace Microsoft.Maui.Controls.Handlers
 {
-	public partial class ShellSectionHandler : ElementHandler<ShellSection, WFrame>
+	public partial class ShellSectionHandler : ElementHandler<ShellSection, WFrame>, IAppearanceObserver
 	{
 		public static PropertyMapper<ShellSection, ShellSectionHandler> Mapper =
 				new PropertyMapper<ShellSection, ShellSectionHandler>(ElementMapper)
@@ -38,7 +36,7 @@ namespace Microsoft.Maui.Controls.Handlers
 
 		public static void MapCurrentItem(ShellSectionHandler handler, ShellSection item)
 		{
-			handler.SyncNavigationStack(false);
+			handler.SyncNavigationStack(false, null);
 		}
 
 		ShellSection? _shellSection;
@@ -47,6 +45,7 @@ namespace Microsoft.Maui.Controls.Handlers
 			if (_shellSection != null)
 			{
 				((IShellSectionController)_shellSection).NavigationRequested -= OnNavigationRequested;
+				((IShellController)_shellSection.FindParentOfType<Shell>()!).RemoveAppearanceObserver(this);
 			}
 
 			// If we've already connected to the navigation manager
@@ -69,24 +68,37 @@ namespace Microsoft.Maui.Controls.Handlers
 			if (_shellSection != null)
 			{
 				((IShellSectionController)_shellSection).NavigationRequested += OnNavigationRequested;
+				((IShellController)_shellSection.FindParentOfType<Shell>()!).AddAppearanceObserver(this, _shellSection);
 			}
 		}
 
 		void OnNavigationRequested(object? sender, NavigationRequestedEventArgs e)
 		{
-			SyncNavigationStack(e.Animated);
+			SyncNavigationStack(e.Animated, e);
 		}
 
-		void SyncNavigationStack(bool animated)
+		void SyncNavigationStack(bool animated, NavigationRequestedEventArgs? e)
 		{
+			// Current Item might transition to null while visibility is adjusting on shell
+			// so we just ignore this and eventually when shell knows
+			// the next current item it will request to sync again
+			if (VirtualView.CurrentItem == null)
+				return;
+
 			List<IView> pageStack = new List<IView>()
 			{
 				(VirtualView.CurrentItem as IShellContentController).GetOrCreateContent()
 			};
 
-			for (var i = 1; i < VirtualView.Navigation.NavigationStack.Count; i++)
+			// PopToRoot in the xplat code fires before the navigation stack has been updated
+			// Once we get shell all converted over to newer navigation APIs this will all be a bit
+			// less leaky
+			if (e?.RequestType != NavigationRequestType.PopToRoot)
 			{
-				pageStack.Add(VirtualView.Navigation.NavigationStack[i]);
+				for (var i = 1; i < VirtualView.Navigation.NavigationStack.Count; i++)
+				{
+					pageStack.Add(VirtualView.Navigation.NavigationStack[i]);
+				}
 			}
 
 			// The point of this is to push the shell navigation over to using the INavigationStack
@@ -123,6 +135,12 @@ namespace Microsoft.Maui.Controls.Handlers
 			{
 				throw new InvalidOperationException("Args must be NavigationRequest");
 			}
+		}
+
+		void IAppearanceObserver.OnAppearanceChanged(ShellAppearance appearance)
+		{
+			// I realize this is empty but it's necessary to register the active section as 
+			// an appearance observer so that shell fires appearance changes when shell section changes
 		}
 	}
 }

@@ -1,24 +1,27 @@
+#nullable disable
+using Microsoft.Maui.Devices;
 using Microsoft.Maui.Graphics;
 using Rect = Microsoft.Maui.Graphics.Rect;
+
 namespace Microsoft.Maui.Controls.Shapes
 {
-	/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="Type[@FullName='Microsoft.Maui.Controls.Shapes.RoundRectangleGeometry']/Docs" />
+	/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="Type[@FullName='Microsoft.Maui.Controls.Shapes.RoundRectangleGeometry']/Docs/*" />
 	public class RoundRectangleGeometry : GeometryGroup
 	{
-		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='.ctor'][1]/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='.ctor'][1]/Docs/*" />
 		public RoundRectangleGeometry()
 		{
 
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='.ctor'][2]/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='.ctor'][2]/Docs/*" />
 		public RoundRectangleGeometry(CornerRadius cornerRadius, Rect rect)
 		{
 			CornerRadius = cornerRadius;
 			Rect = rect;
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='RectProperty']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='RectProperty']/Docs/*" />
 		public static readonly BindableProperty RectProperty =
 		   BindableProperty.Create(nameof(Rect), typeof(Rect), typeof(RoundRectangleGeometry), new Rect(),
 			   propertyChanged: OnRectChanged);
@@ -28,14 +31,14 @@ namespace Microsoft.Maui.Controls.Shapes
 			(bindable as RoundRectangleGeometry)?.UpdateGeometry();
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='Rect']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='Rect']/Docs/*" />
 		public Rect Rect
 		{
 			set { SetValue(RectProperty, value); }
 			get { return (Rect)GetValue(RectProperty); }
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='CornerRadiusProperty']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='CornerRadiusProperty']/Docs/*" />
 		public static readonly BindableProperty CornerRadiusProperty =
 			BindableProperty.Create(nameof(CornerRadius), typeof(CornerRadius), typeof(RoundRectangleGeometry), new CornerRadius(),
 				propertyChanged: OnCornerRadiusChanged);
@@ -45,7 +48,7 @@ namespace Microsoft.Maui.Controls.Shapes
 			(bindable as RoundRectangleGeometry)?.UpdateGeometry();
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='CornerRadius']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/RoundRectangleGeometry.xml" path="//Member[@MemberName='CornerRadius']/Docs/*" />
 		public CornerRadius CornerRadius
 		{
 			set { SetValue(CornerRadiusProperty, value); }
@@ -108,6 +111,21 @@ namespace Microsoft.Maui.Controls.Shapes
 			roundedRectGeometry.Children.Add(new PathGeometry(pathFigureCollection, FillRule.Nonzero));
 
 			return roundedRectGeometry;
+		}
+
+		public override void AppendPath(Graphics.PathF path)
+		{
+			float x = (float)Rect.X;
+			float y = (float)Rect.Y;
+			float w = (float)Rect.Width;
+			float h = (float)Rect.Height;
+
+			float tl = (float)CornerRadius.TopLeft;
+			float tr = (float)CornerRadius.TopRight;
+			float bl = (float)CornerRadius.BottomLeft;
+			float br = (float)CornerRadius.BottomRight;
+
+			path.AppendRoundedRectangle(x, y, w, h, tl, tr, bl, br);
 		}
 	}
 }

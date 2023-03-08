@@ -3,7 +3,9 @@ using Microsoft.Maui;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Graphics;
 
-#if !NETSTANDARD
+#if TIZEN
+using Tizen.UIExtensions.NUI.GraphicsView;
+#elif !(NETSTANDARD || !PLATFORM)
 using Microsoft.Maui.Graphics.Skia.Views;
 #else
 using SkiaGraphicsView = System.Object;
@@ -36,8 +38,6 @@ namespace Maui.Controls.Sample.Controls
 		{
 #if __ANDROID__
 			return new SkiaGraphicsView(Context);
-#elif TIZEN
-			return new SkiaGraphicsView(NativeParent);
 #else
 			return new SkiaGraphicsView();
 #endif
@@ -45,7 +45,7 @@ namespace Maui.Controls.Sample.Controls
 
 		public static void MapShape(SkiaShapeViewHandler handler, IShapeView shapeView)
 		{
-#if !NETSTANDARD
+#if !(NETSTANDARD || !PLATFORM)
 			handler.PlatformView.Drawable = new ShapeDrawable(shapeView);
 #endif
 		}
@@ -54,7 +54,7 @@ namespace Maui.Controls.Sample.Controls
 		{
 #if __IOS__ || __MACCATALYST__
 			handler.PlatformView.SetNeedsDisplay();
-#elif !NETSTANDARD
+#elif !(NETSTANDARD || !PLATFORM)
 			handler.PlatformView.Invalidate();
 #endif
 		}

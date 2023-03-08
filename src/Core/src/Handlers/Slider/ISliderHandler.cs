@@ -5,8 +5,8 @@ using PlatformView = Android.Widget.SeekBar;
 #elif WINDOWS
 using PlatformView = Microsoft.UI.Xaml.Controls.Slider;
 #elif TIZEN
-using PlatformView = ElmSharp.Slider;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+using PlatformView = Tizen.NUI.Components.Slider;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 #endif
 

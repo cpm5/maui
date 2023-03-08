@@ -1,11 +1,11 @@
 using System.ComponentModel;
+using Microsoft.Maui.Controls.Platform;
+using Microsoft.Maui.Graphics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
+using static Microsoft.Maui.Controls.Compatibility.Platform.UWP.ViewToRendererConverter;
 using WBrush = Microsoft.UI.Xaml.Media.Brush;
 using WThickness = Microsoft.UI.Xaml.Thickness;
-using static Microsoft.Maui.Controls.Compatibility.Platform.UWP.ViewToRendererConverter;
-using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Controls.Platform;
 
 namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 {
@@ -170,6 +170,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 			Control.BorderThickness = Element.BorderWidth == (double)RadioButton.BorderWidthProperty.DefaultValue ? WinUIHelpers.CreateThickness(3) : WinUIHelpers.CreateThickness(Element.BorderWidth);
 		}
 
+		[PortHandler]
 		void UpdateContent()
 		{
 			var content = Element?.Content;

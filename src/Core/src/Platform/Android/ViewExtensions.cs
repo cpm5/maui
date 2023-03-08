@@ -1,12 +1,15 @@
 using System;
 using System.Numerics;
+using System.Threading.Tasks;
 using Android.Content;
 using Android.Graphics.Drawables;
 using Android.OS;
 using Android.Util;
 using Android.Views;
 using Android.Widget;
+using AndroidX.AppCompat.Widget;
 using AndroidX.Core.Content;
+using AndroidX.Window.Layout;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Primitives;
@@ -21,12 +24,8 @@ namespace Microsoft.Maui.Platform
 	{
 		public static void Initialize(this AView platformView, IView view)
 		{
-			var context = platformView.Context;
-			if (context == null)
-				return;
-
-			var pivotX = (float)(view.AnchorX * context.ToPixels(view.Frame.Width));
-			var pivotY = (float)(view.AnchorY * context.ToPixels(view.Frame.Height));
+			var pivotX = (float)(view.AnchorX * platformView.ToPixels(view.Frame.Width));
+			var pivotY = (float)(view.AnchorY * platformView.ToPixels(view.Frame.Height));
 			int visibility;
 
 			if (view is IActivityIndicator a)
@@ -42,12 +41,12 @@ namespace Microsoft.Maui.Platform
 			PlatformInterop.Set(platformView,
 				visibility: visibility,
 				layoutDirection: (int)GetLayoutDirection(view),
-				minimumHeight: (int)context.ToPixels(view.MinimumHeight),
-				minimumWidth: (int)context.ToPixels(view.MinimumWidth),
+				minimumHeight: (int)platformView.ToPixels(view.MinimumHeight),
+				minimumWidth: (int)platformView.ToPixels(view.MinimumWidth),
 				enabled: view.IsEnabled,
 				alpha: (float)view.Opacity,
-				translationX: context.ToPixels(view.TranslationX),
-				translationY: context.ToPixels(view.TranslationY),
+				translationX: platformView.ToPixels(view.TranslationX),
+				translationY: platformView.ToPixels(view.TranslationY),
 				scaleX: (float)(view.Scale * view.ScaleX),
 				scaleY: (float)(view.Scale * view.ScaleY),
 				rotation: (float)view.Rotation,
@@ -148,7 +147,7 @@ namespace Microsoft.Maui.Platform
 								view.SetBackgroundColor(color);
 								break;
 							case "drawable":
-								using (Drawable drawable = ContextCompat.GetDrawable(context, background.ResourceId))
+								using (Drawable? drawable = ContextCompat.GetDrawable(context, background.ResourceId))
 									view.Background = drawable;
 								break;
 						}
@@ -159,16 +158,58 @@ namespace Microsoft.Maui.Platform
 
 		public static void UpdateBackground(this ContentViewGroup platformView, IBorderStroke border)
 		{
-			bool hasBorder = border.Shape != null && border.Stroke != null;
+			bool hasBorder = border.Shape != null;
 
 			if (hasBorder)
 				platformView.UpdateBorderStroke(border);
 		}
 
 		public static void UpdateBackground(this AView platformView, IView view) =>
-			platformView.UpdateBackground(view.Background);
+			platformView.UpdateBackground(view, false);
 
-		public static void UpdateBackground(this AView platformView, Paint? background)
+		internal static void UpdateBackground(this AView platformView, IView view, bool treatTransparentAsNull) =>
+			platformView.UpdateBackground(view.Background, treatTransparentAsNull);
+
+		internal static void UpdateBackground(this TextView platformView, IView view) =>
+			UpdateBackground(platformView, view, true);
+
+		// TODO: NET8 make this public for NET8.0
+		internal static void UpdateBackground(this EditText platformView, IView view)
+		{
+			var paint = view.Background;
+
+			if (paint.IsNullOrEmpty())
+			{
+				return;
+			}
+
+			// Remove previous background gradient if any
+			if (platformView.Background is MauiDrawable mauiDrawable)
+			{
+				platformView.Background = null;
+				mauiDrawable.Dispose();
+			}
+
+			// Android will reset the padding when setting a Background drawable
+			// So we need to reapply the padding after
+			var padLeft = platformView.PaddingLeft;
+			var padTop = platformView.PaddingTop;
+			var padRight = platformView.PaddingRight;
+			var padBottom = platformView.PaddingBottom;
+
+			var previousDrawable = platformView.Background;
+			var backgroundDrawable = paint!.ToDrawable(platformView.Context);
+			LayerDrawable layer = new LayerDrawable(new Drawable[] { backgroundDrawable!, previousDrawable! });
+			platformView.Background = layer;
+
+			// Apply previous padding
+			platformView.SetPadding(padLeft, padTop, padRight, padBottom);
+		}
+
+		public static void UpdateBackground(this AView platformView, Paint? background) =>
+			UpdateBackground(platformView, background, false);
+
+		internal static void UpdateBackground(this AView platformView, Paint? background, bool treatTransparentAsNull)
 		{
 			var paint = background;
 
@@ -181,7 +222,14 @@ namespace Microsoft.Maui.Platform
 					mauiDrawable.Dispose();
 				}
 
-				if (paint is SolidPaint solidPaint)
+				if (treatTransparentAsNull && paint.IsTransparent())
+				{
+					// For controls where android treats transparent as null it's more
+					// performant to just set the background to null instead of
+					// giving it a transparent color/drawable
+					platformView.Background = null;
+				}
+				else if (paint is SolidPaint solidPaint)
 				{
 					if (solidPaint.Color is Color backgroundColor)
 						platformView.SetBackgroundColor(backgroundColor.ToPlatform());
@@ -191,6 +239,10 @@ namespace Microsoft.Maui.Platform
 					if (paint!.ToDrawable(platformView.Context) is Drawable drawable)
 						platformView.Background = drawable;
 				}
+			}
+			else if (platformView is LayoutViewGroup)
+			{
+				platformView.Background = null;
 			}
 		}
 
@@ -295,6 +347,33 @@ namespace Microsoft.Maui.Platform
 			PlatformInterop.RequestLayoutIfNeeded(platformView);
 		}
 
+		public static async Task UpdateBackgroundImageSourceAsync(this AView platformView, IImageSource? imageSource, IImageSourceServiceProvider? provider)
+		{
+			if (provider == null)
+				return;
+
+			Context? context = platformView.Context;
+
+			if (context == null)
+				return;
+
+			if (imageSource != null)
+			{
+				var service = provider.GetRequiredImageSourceService(imageSource);
+				var result = await service.GetDrawableAsync(imageSource, context);
+				Drawable? backgroundImageDrawable = result?.Value;
+
+				if (platformView.IsAlive())
+					platformView.Background = backgroundImageDrawable;
+			}
+		}
+
+		public static void UpdateToolTip(this AView view, ToolTip? tooltip)
+		{
+			string? text = tooltip?.Content?.ToString();
+			TooltipCompat.SetTooltipText(view, text);
+		}
+
 		public static void RemoveFromParent(this AView view)
 		{
 			if (view != null)
@@ -304,7 +383,7 @@ namespace Microsoft.Maui.Platform
 		internal static Rect GetPlatformViewBounds(this IView view)
 		{
 			var platformView = view?.ToPlatform();
-			
+
 			if (platformView?.Context == null)
 			{
 				return new Rect();
@@ -382,16 +461,30 @@ namespace Microsoft.Maui.Platform
 
 		internal static Graphics.Rect GetBoundingBox(this View? platformView)
 		{
-			if (platformView == null)
+			if (platformView?.Context == null)
 				return new Rect();
 
+			var context = platformView.Context;
 			var rect = new Android.Graphics.Rect();
 			platformView.GetGlobalVisibleRect(rect);
-			return new Rect(rect.ExactCenterX() - (rect.Width() / 2), rect.ExactCenterY() - (rect.Height() / 2), (float)rect.Width(), (float)rect.Height());
+
+			return new Rect(
+				context.FromPixels(rect.ExactCenterX() - (rect.Width() / 2)),
+				context.FromPixels(rect.ExactCenterY() - (rect.Height() / 2)),
+				context.FromPixels((float)rect.Width()),
+				context.FromPixels((float)rect.Height()));
 		}
 
-		internal static bool IsLoaded(this View frameworkElement) =>
-			frameworkElement.IsAttachedToWindow;
+		internal static bool IsLoaded(this View frameworkElement)
+		{
+			if (frameworkElement == null)
+				return false;
+
+			if (frameworkElement.IsDisposed())
+				return false;
+
+			return frameworkElement.IsAttachedToWindow;
+		}
 
 		internal static IDisposable OnLoaded(this View frameworkElement, Action action)
 		{
@@ -513,24 +606,55 @@ namespace Microsoft.Maui.Platform
 			=> GetHostedWindow(view?.Handler?.PlatformView as View);
 
 		internal static IWindow? GetHostedWindow(this View? view)
-			=> GetWindowFromActivity(view?.Context?.GetActivity());
+			=> view?.Context?.GetWindow();
 
-		internal static IWindow? GetWindowFromActivity(this Android.App.Activity? activity)
+		internal static Rect GetFrameRelativeTo(this View view, View relativeTo)
 		{
-			if (activity is null)
+			var viewWindowLocation = view.GetLocationOnScreen();
+			var relativeToLocation = relativeTo.GetLocationOnScreen();
+
+			return
+				new Rect(
+						new Point(viewWindowLocation.X - relativeToLocation.X, viewWindowLocation.Y - relativeToLocation.Y),
+						new Graphics.Size(view.Context.FromPixels(view.MeasuredWidth), view.Context.FromPixels(view.MeasuredHeight))
+					);
+		}
+
+		internal static Rect GetFrameRelativeToWindow(this View view)
+		{
+			return
+				new Rect(view.GetLocationOnScreen(),
+				new(view.Context.FromPixels(view.MeasuredHeight), view.Context.FromPixels(view.MeasuredWidth)));
+		}
+
+		internal static Point GetLocationOnScreen(this View view)
+		{
+			int[] location = new int[2];
+			view.GetLocationOnScreen(location);
+			return new Point(view.Context.FromPixels(location[0]), view.Context.FromPixels(location[1]));
+		}
+
+		internal static Point? GetLocationOnScreen(this IElement element)
+		{
+			if (element.Handler?.MauiContext == null)
 				return null;
 
-			var windows = WindowExtensions.GetWindows();
-			foreach (var window in windows)
-			{
-				if (window.Handler?.PlatformView is Android.App.Activity active)
-				{
-					if (active == activity)
-						return window;
-				}
-			}
+			return (element.ToPlatform())?.GetLocationOnScreen();
+		}
 
-			return null;
+		internal static Point GetLocationOnScreenPx(this View view)
+		{
+			int[] location = new int[2];
+			view.GetLocationOnScreen(location);
+			return new Point(location[0], location[1]);
+		}
+
+		internal static Point? GetLocationOnScreenPx(this IElement element)
+		{
+			if (element.Handler?.MauiContext == null)
+				return null;
+
+			return (element.ToPlatform())?.GetLocationOnScreenPx();
 		}
 	}
 }

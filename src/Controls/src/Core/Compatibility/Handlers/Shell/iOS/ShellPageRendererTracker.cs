@@ -1,7 +1,9 @@
+﻿#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using CoreGraphics;
@@ -62,6 +64,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 		NSCache _nSCache;
 		SearchHandlerAppearanceTracker _searchHandlerAppearanceTracker;
 		IFontManager _fontManager;
+		bool _isVisiblePage;
 
 		BackButtonBehavior BackButtonBehavior { get; set; }
 		UINavigationItem NavigationItem { get; set; }
@@ -73,16 +76,13 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			_nSCache = new NSCache();
 			_context.Shell.PropertyChanged += HandleShellPropertyChanged;
 
-			if (_context.Shell.Toolbar != null)
-				_context.Shell.Toolbar.PropertyChanged += OnToolbarPropertyChanged;
-
 			_fontManager = context.Shell.RequireFontManager();
 		}
 
 		public void OnFlyoutBehaviorChanged(FlyoutBehavior behavior)
 		{
 			_flyoutBehavior = behavior;
-			UpdateToolbarItems().FireAndForget();
+			UpdateToolbarItemsInternal();
 		}
 
 		protected virtual void HandleShellPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -132,18 +132,42 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 		protected virtual void UpdateTabBarVisible()
 		{
-			bool tabBarVisible = Shell.GetTabBarIsVisible(Page);
+			var tabBarVisible =
+				(Page.FindParentOfType<ShellItem>() as IShellItemController)?.ShowTabs ?? Shell.GetTabBarIsVisible(Page);
+
 			ViewController.HidesBottomBarWhenPushed = !tabBarVisible;
 		}
 
 		void OnToolbarPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
-			UpdateTitle();
+			if (!ToolbarReady())
+				return;
+
+			if (e.PropertyName == Shell.TitleViewProperty.PropertyName)
+			{
+				UpdateTitleView();
+			}
+			else if (e.PropertyName == Page.TitleProperty.PropertyName)
+			{
+				UpdateTitle();
+			}
 		}
 
 		protected virtual void UpdateTitle()
 		{
+			if (!ToolbarReady())
+				return;
+
 			NavigationItem.Title = _context.Shell.Toolbar.Title;
+		}
+
+
+		bool ToolbarReady()
+		{
+			if (_context.Shell.Toolbar is ShellToolbar st)
+				return st.CurrentPage == Page;
+
+			return _isVisiblePage;
 		}
 
 		void UpdateShellToMyPage()
@@ -156,8 +180,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			UpdateTitleView();
 			UpdateTitle();
 			UpdateTabBarVisible();
-			UpdateToolbarItems()
-				.FireAndForget();
+			UpdateToolbarItemsInternal();
 		}
 
 		protected virtual void OnPageSet(Page oldPage, Page newPage)
@@ -165,17 +188,23 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			if (oldPage != null)
 			{
 				oldPage.Appearing -= PageAppearing;
+				oldPage.Disappearing -= PageDisappearing;
 				oldPage.PropertyChanged -= OnPagePropertyChanged;
+				oldPage.Loaded -= OnPageLoaded;
 				((INotifyCollectionChanged)oldPage.ToolbarItems).CollectionChanged -= OnToolbarItemsChanged;
 			}
 
 			if (newPage != null)
 			{
 				newPage.Appearing += PageAppearing;
+				newPage.Disappearing += PageDisappearing;
 				newPage.PropertyChanged += OnPagePropertyChanged;
-				((INotifyCollectionChanged)newPage.ToolbarItems).CollectionChanged += OnToolbarItemsChanged;
 
-				UpdateShellToMyPage();
+				if (!newPage.IsLoaded)
+					newPage.Loaded += OnPageLoaded;
+
+				((INotifyCollectionChanged)newPage.ToolbarItems).CollectionChanged += OnToolbarItemsChanged;
+				CheckAppeared();
 
 				if (oldPage == null)
 				{
@@ -192,7 +221,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 		{
 			NavigationItem = ViewController.NavigationItem;
 
-			if (!PlatformVersion.IsAtLeast(11))
+			if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsTvOSVersionAtLeast(11)))
 			{
 				ViewController.AutomaticallyAdjustsScrollViewInsets = false;
 			}
@@ -200,7 +229,21 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 		protected virtual void UpdateTitleView()
 		{
-			var titleView = _context.Shell.GetEffectiveValue<View>(Shell.TitleViewProperty, () => Shell.GetTitleView(_context.Shell), null, Page);
+			if (!ToolbarReady())
+				return;
+
+			var titleView = _context.Shell.Toolbar.TitleView as View;
+
+			if (NavigationItem.TitleView is TitleViewContainer tvc &&
+				tvc.View == titleView)
+			{
+				// The MauiContext/handler/other may have changed on the `View`
+				// This tells the title view container to make sure
+				// the currently added platformview is still valid and doesn't need
+				// to be recreated
+				tvc.UpdatePlatformView();
+				return;
+			}
 
 			if (titleView == null)
 			{
@@ -210,15 +253,36 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			}
 			else
 			{
-				var view = new TitleViewContainer(titleView);
-				NavigationItem.TitleView = view;
+				if (titleView.Parent != null)
+				{
+					var view = new TitleViewContainer(titleView);
+					NavigationItem.TitleView = view;
+				}
+				else
+				{
+					titleView.ParentSet += OnTitleViewParentSet;
+				}
 			}
 		}
 
-		protected virtual Task UpdateToolbarItems()
+		void OnTitleViewParentSet(object sender, EventArgs e)
+		{
+			((Element)sender).ParentSet -= OnTitleViewParentSet;
+			UpdateTitleView();
+		}
+
+		internal void UpdateToolbarItemsInternal(bool updateWhenLoaded = true)
+		{
+			if (updateWhenLoaded && Page.IsLoaded || !updateWhenLoaded)
+				UpdateToolbarItems();
+		}
+
+		protected virtual void UpdateToolbarItems()
 		{
 			if (NavigationItem == null)
-				return Task.CompletedTask;
+			{
+				return;
+			}
 
 			if (NavigationItem.RightBarButtonItems != null)
 			{
@@ -241,7 +305,6 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			NavigationItem.SetRightBarButtonItems(primaries == null ? new UIBarButtonItem[0] : primaries.ToArray(), false);
 
 			UpdateLeftToolbarItems();
-			return Task.CompletedTask;
 		}
 
 		void UpdateLeftToolbarItems()
@@ -282,14 +345,10 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 					NavigationItem.LeftBarButtonItem =
 						new UIBarButtonItem(icon, UIBarButtonItemStyle.Plain, (s, e) => LeftBarButtonItemHandler(ViewController, IsRootPage)) { Enabled = enabled };
 				}
-				else if (!String.IsNullOrWhiteSpace(text))
-				{
-					NavigationItem.LeftBarButtonItem =
-						new UIBarButtonItem(text, UIBarButtonItemStyle.Plain, (s, e) => LeftBarButtonItemHandler(ViewController, IsRootPage)) { Enabled = enabled };
-				}
 				else
 				{
 					NavigationItem.LeftBarButtonItem = null;
+					UpdateBackButtonTitle();
 				}
 
 				if (NavigationItem.LeftBarButtonItem != null)
@@ -313,6 +372,40 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 					}
 				}
 			});
+
+			UpdateBackButtonTitle();
+		}
+
+
+		void UpdateBackButtonTitle()
+		{
+			var behavior = BackButtonBehavior;
+			var text = behavior.GetPropertyIfSet<string>(BackButtonBehavior.TextOverrideProperty, null);
+
+			var navController = ViewController?.NavigationController;
+
+			if (navController != null)
+			{
+				var viewControllers = ViewController.NavigationController.ViewControllers;
+				var count = viewControllers.Length;
+
+				if (count > 1 && viewControllers[count - 1] == ViewController)
+				{
+					var previousNavItem = viewControllers[count - 2].NavigationItem;
+					if (previousNavItem != null)
+					{
+						if (!String.IsNullOrWhiteSpace(text))
+						{
+							var barButtonItem = (previousNavItem.BackBarButtonItem ??= new UIBarButtonItem());
+							barButtonItem.Title = text;
+						}
+						else if (previousNavItem.BackBarButtonItem != null)
+						{
+							previousNavItem.BackBarButtonItem = null;
+						}
+					}
+				}
+			}
 		}
 
 		void LeftBarButtonItemHandler(UIViewController controller, bool isRootPage)
@@ -374,12 +467,12 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			return img;
 		}
 
-		async void OnToolbarItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
+		void OnToolbarItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
-			await UpdateToolbarItems().ConfigureAwait(false);
+			UpdateToolbarItemsInternal();
 		}
 
-		async void SetBackButtonBehavior(BackButtonBehavior value)
+		void SetBackButtonBehavior(BackButtonBehavior value)
 		{
 			if (BackButtonBehavior == value)
 				return;
@@ -392,7 +485,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			if (BackButtonBehavior != null)
 				BackButtonBehavior.PropertyChanged += OnBackButtonBehaviorPropertyChanged;
 
-			await UpdateToolbarItems().ConfigureAwait(false);
+			UpdateToolbarItemsInternal();
 		}
 
 		void OnBackButtonCommandCanExecuteChanged(object sender, EventArgs e)
@@ -414,7 +507,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			{
 				MatchHeight = true;
 
-				if (PlatformVersion.IsAtLeast(11))
+				if (OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsTvOSVersionAtLeast(11))
 				{
 					TranslatesAutoresizingMaskIntoConstraints = false;
 				}
@@ -430,7 +523,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 				get => base.Frame;
 				set
 				{
-					if (!PlatformVersion.IsAtLeast(11) && Superview != null)
+					if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsTvOSVersionAtLeast(11)) && Superview != null)
 					{
 						value.Y = Superview.Bounds.Y;
 						value.Height = Superview.Bounds.Height;
@@ -440,17 +533,31 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 				}
 			}
 
+			public override void LayoutSubviews()
+			{
+				if (Height == null || Height == 0)
+				{
+					UpdateFrame(Superview);
+				}
+
+				base.LayoutSubviews();
+			}
+
 			public override void WillMoveToSuperview(UIView newSuper)
 			{
-				if (newSuper != null)
+				UpdateFrame(newSuper);
+				base.WillMoveToSuperview(newSuper);
+			}
+
+			void UpdateFrame(UIView newSuper)
+			{
+				if (newSuper is not null && newSuper.Bounds != CGRect.Empty)
 				{
-					if (!PlatformVersion.IsAtLeast(11))
+					if (!(OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsTvOSVersionAtLeast(11)))
 						Frame = new CGRect(Frame.X, newSuper.Bounds.Y, Frame.Width, newSuper.Bounds.Height);
 
 					Height = newSuper.Bounds.Height;
 				}
-
-				base.WillMoveToSuperview(newSuper);
 			}
 
 			public override CGSize IntrinsicContentSize => UILayoutFittingExpandedSize;
@@ -513,6 +620,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 				_searchController.SearchBar.AccessibilityIdentifier = _searchHandler.AutomationId;
 		}
 
+		[SupportedOSPlatform("ios11.0")]
 		protected virtual void RemoveSearchController(UINavigationItem navigationItem)
 		{
 			navigationItem.SearchController = null;
@@ -543,7 +651,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			{
 				if (searchController != null)
 				{
-					if (PlatformVersion.IsAtLeast(11))
+					if (OperatingSystem.IsIOSVersionAtLeast(11))
 						RemoveSearchController(NavigationItem);
 					else
 						NavigationItem.TitleView = null;
@@ -551,7 +659,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			}
 			else if (visibility == SearchBoxVisibility.Collapsible || visibility == SearchBoxVisibility.Expanded)
 			{
-				if (PlatformVersion.IsAtLeast(11))
+				if (OperatingSystem.IsIOSVersionAtLeast(11))
 				{
 					NavigationItem.SearchController = _searchController;
 					NavigationItem.HidesSearchBarWhenScrolling = visibility == SearchBoxVisibility.Collapsible;
@@ -591,7 +699,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			var visibility = SearchHandler.SearchBoxVisibility;
 			if (visibility != SearchBoxVisibility.Hidden)
 			{
-				if (PlatformVersion.IsAtLeast(11))
+				if (OperatingSystem.IsIOSVersionAtLeast(11))
 					NavigationItem.SearchController = _searchController;
 				else
 					NavigationItem.TitleView = _searchController.SearchBar;
@@ -609,7 +717,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			searchBar.Placeholder = SearchHandler.Placeholder;
 			UpdateSearchIsEnabled(_searchController);
 			searchBar.SearchButtonClicked += SearchButtonClicked;
-			if (PlatformVersion.IsAtLeast(11))
+			if (OperatingSystem.IsIOSVersionAtLeast(11))
 				NavigationItem.HidesSearchBarWhenScrolling = visibility == SearchBoxVisibility.Collapsible;
 
 			var icon = SearchHandler.QueryIcon;
@@ -647,7 +755,7 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 		{
 			_searchHandlerAppearanceTracker.Dispose();
 			_searchHandlerAppearanceTracker = null;
-			if (PlatformVersion.IsAtLeast(11))
+			if (OperatingSystem.IsIOSVersionAtLeast(11))
 			{
 				RemoveSearchController(NavigationItem);
 			}
@@ -687,12 +795,51 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			});
 		}
 
-		void PageAppearing(object sender, EventArgs e)
+		void OnPageLoaded(object sender, EventArgs e)
 		{
+			if (sender is Page page)
+				page.Loaded -= OnPageLoaded;
+
+			UpdateToolbarItemsInternal();
+			CheckAppeared();
+		}
+
+		void PageAppearing(object sender, EventArgs e) =>
+			SetAppeared();
+
+		void PageDisappearing(object sender, EventArgs e) =>
+			SetDisappeared();
+
+		void CheckAppeared()
+		{
+			if (_context.Shell.CurrentPage == Page)
+				SetAppeared();
+		}
+
+		void SetAppeared()
+		{
+			if (_isVisiblePage)
+				return;
+
+			_isVisiblePage = true;
 			//UIKIt will try to override our colors when the SearchController is inside the NavigationBar
 			//Best way was to force them to be set again when page is Appearing / ViewDidLoad
 			_searchHandlerAppearanceTracker?.UpdateSearchBarColors();
 			UpdateShellToMyPage();
+
+			if (_context.Shell.Toolbar != null)
+				_context.Shell.Toolbar.PropertyChanged += OnToolbarPropertyChanged;
+		}
+
+		void SetDisappeared()
+		{
+			if (!_isVisiblePage)
+				return;
+
+			_isVisiblePage = false;
+
+			if (_context.Shell.Toolbar != null)
+				_context.Shell.Toolbar.PropertyChanged -= OnToolbarPropertyChanged;
 		}
 
 		#endregion SearchHandler
@@ -712,7 +859,9 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 			if (disposing)
 			{
 				_searchHandlerAppearanceTracker?.Dispose();
+				Page.Loaded -= OnPageLoaded;
 				Page.Appearing -= PageAppearing;
+				Page.Disappearing -= PageDisappearing;
 				Page.PropertyChanged -= OnPagePropertyChanged;
 				((INotifyCollectionChanged)Page.ToolbarItems).CollectionChanged -= OnToolbarItemsChanged;
 				((IShellController)_context.Shell).RemoveFlyoutBehaviorObserver(this);
@@ -724,6 +873,9 @@ namespace Microsoft.Maui.Controls.Platform.Compatibility
 
 				if (_context.Shell.Toolbar != null)
 					_context.Shell.Toolbar.PropertyChanged -= OnToolbarPropertyChanged;
+
+				if (NavigationItem?.TitleView is TitleViewContainer tvc)
+					tvc.Disconnect();
 			}
 
 			_context = null;

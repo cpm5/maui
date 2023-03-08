@@ -1,6 +1,5 @@
 #nullable enable
 using Microsoft.UI.Xaml.Controls;
-using WResourceDictionary = Microsoft.UI.Xaml.ResourceDictionary;
 
 namespace Microsoft.Maui.Handlers
 {
@@ -15,13 +14,13 @@ namespace Microsoft.Maui.Handlers
 
 		public static void MapTrackColor(ISwitchHandler handler, ISwitch view)
 		{
-			if (handler is SwitchHandler platformHandler)
+			if (handler is SwitchHandler)
 				handler.PlatformView?.UpdateTrackColor(view);
 		}
 
 		public static void MapThumbColor(ISwitchHandler handler, ISwitch view)
 		{
-			if (handler is SwitchHandler platformHandler)
+			if (handler is SwitchHandler)
 				handler.PlatformView?.UpdateThumbColor(view);
 		}
 
@@ -39,7 +38,7 @@ namespace Microsoft.Maui.Handlers
 
 		void OnToggled(object sender, UI.Xaml.RoutedEventArgs e)
 		{
-			if (VirtualView == null || PlatformView == null)
+			if (VirtualView is null || PlatformView is null || VirtualView.IsOn == PlatformView.IsOn)
 				return;
 
 			VirtualView.IsOn = PlatformView.IsOn;

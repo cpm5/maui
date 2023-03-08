@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.ComponentModel;
 using Android.Content;
@@ -85,7 +86,6 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		void IAppearanceObserver.OnAppearanceChanged(ShellAppearance appearance)
 		{
-			UpdateStatusBarColor(appearance);
 		}
 
 		#endregion IAppearanceObserver
@@ -114,6 +114,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		IShellFlyoutRenderer _flyoutView;
 		FrameLayout _frameLayout;
 		IMauiContext _mauiContext;
+		bool _disposed;
 
 		event EventHandler<PropertyChangedEventArgs> _elementPropertyChanged;
 
@@ -268,37 +269,6 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			return size + (int)mode;
 		}
 
-		void UpdateStatusBarColor(ShellAppearance appearance)
-		{
-			var activity = AndroidContext.GetActivity();
-			var window = activity?.Window;
-			var decorView = window?.DecorView;
-
-			int statusBarHeight = AndroidContext.GetStatusBarHeight();
-			int navigationBarHeight = AndroidContext.GetNavigationBarHeight();
-
-			// we are using the split drawable here to avoid GPU overdraw.
-			// All it really is is a drawable that only draws under the statusbar/bottom bar to make sure
-			// we dont draw over areas we dont need to. This has very limited benefits considering its
-			// only saving us a flat color fill BUT it helps people not freak out about overdraw.
-			AColor color;
-			if (appearance != null)
-			{
-				color = appearance.BackgroundColor.ToPlatform(Color.FromArgb("#03A9F4"));
-			}
-			else
-			{
-				color = Color.FromArgb("#03A9F4").ToPlatform();
-			}
-
-			if (!(decorView.Background is SplitDrawable splitDrawable) ||
-				splitDrawable.Color != color || splitDrawable.TopSize != statusBarHeight || splitDrawable.BottomSize != navigationBarHeight)
-			{
-				var split = new SplitDrawable(color, statusBarHeight, navigationBarHeight);
-				decorView.SetBackground(split);
-			}
-		}
-
 		bool IViewHandler.HasContainer { get => false; set { } }
 
 		object IViewHandler.ContainerView => null;
@@ -345,48 +315,30 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		void IElementHandler.DisconnectHandler()
 		{
+			if (_disposed)
+				return;
+
+			_disposed = true;
+
+			Element.PropertyChanged -= OnElementPropertyChanged;
+			Element.SizeChanged -= OnElementSizeChanged;
+			((IShellController)Element).RemoveAppearanceObserver(this);
+
+			if (_flyoutView is ShellFlyoutRenderer sfr)
+				sfr.Disconnect();
+			else
+				(_flyoutView as IDisposable)?.Dispose();
+
+			if (_currentView is ShellItemRendererBase sir)
+				sir.Disconnect();
+			else
+				_currentView.Dispose();
+
+			_currentView = null;
+
+			Element = null;
+
+			_disposed = true;
 		}
-
-		class SplitDrawable : Drawable
-		{
-			public int BottomSize { get; }
-			public AColor Color { get; }
-			public int TopSize { get; }
-
-			public SplitDrawable(AColor color, int topSize, int bottomSize)
-			{
-				Color = color;
-				BottomSize = bottomSize;
-				TopSize = topSize;
-			}
-
-			public override int Opacity => (int)Format.Opaque;
-
-			public override void Draw(Canvas canvas)
-			{
-				var bounds = Bounds;
-
-				using (var paint = new Paint())
-				{
-
-					paint.Color = Color;
-
-					canvas.DrawRect(new ARect(0, 0, bounds.Right, TopSize), paint);
-
-					canvas.DrawRect(new ARect(0, bounds.Bottom - BottomSize, bounds.Right, bounds.Bottom), paint);
-
-					paint.Dispose();
-				}
-			}
-
-			public override void SetAlpha(int alpha)
-			{
-			}
-
-			public override void SetColorFilter(ColorFilter colorFilter)
-			{
-			}
-		}
-
 	}
 }

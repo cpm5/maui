@@ -1,3 +1,4 @@
+#nullable disable
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -15,7 +16,7 @@ namespace Microsoft.Maui.Controls.Platform
 		readonly IMauiContext _mauiContext;
 		readonly IList _groupList;
 
-		public GroupedItemTemplateCollection(IEnumerable itemsSource, DataTemplate itemTemplate, 
+		public GroupedItemTemplateCollection(IEnumerable itemsSource, DataTemplate itemTemplate,
 			DataTemplate groupHeaderTemplate, DataTemplate groupFooterTemplate, BindableObject container, IMauiContext mauiContext = null)
 		{
 			_itemsSource = itemsSource;

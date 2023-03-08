@@ -6,8 +6,8 @@ using PlatformView = AndroidX.AppCompat.Widget.AppCompatCheckBox;
 #elif WINDOWS
 using PlatformView = Microsoft.UI.Xaml.Controls.CheckBox;
 #elif TIZEN
-using PlatformView = ElmSharp.Check;
-#elif NETSTANDARD
+using PlatformView = Tizen.UIExtensions.NUI.GraphicsView.CheckBox;
+#elif (NETSTANDARD || !PLATFORM)
 using PlatformView = System.Object;
 #endif
 

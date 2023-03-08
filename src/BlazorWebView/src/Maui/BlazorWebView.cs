@@ -8,7 +8,7 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 	/// <summary>
 	/// A <see cref="View"/> that can render Blazor content.
 	/// </summary>
-	public class BlazorWebView : View, IBlazorWebView
+	public partial class BlazorWebView : View, IBlazorWebView
 	{
 		internal const string AppHostAddress = "0.0.0.0";
 
@@ -30,7 +30,21 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 		/// </summary>
 		public string? HostPage { get; set; }
 
-		/// <inheritdoc />
+		/// <summary>
+		/// Bindable property for <see cref="StartPath"/>.
+		/// </summary>
+		public static readonly BindableProperty StartPathProperty = BindableProperty.Create(nameof(StartPath), typeof(string), typeof(BlazorWebView), "/");
+
+		/// <summary>
+		/// Gets or sets the path for initial navigation within the Blazor navigation context when the Blazor component is finished loading.
+		/// </summary>
+		public string StartPath
+		{
+			get { return (string)GetValue(StartPathProperty); }
+			set { SetValue(StartPathProperty, value); }
+		}
+
+		/// <inheritdoc cref="IBlazorWebView.RootComponents" />
 		public RootComponentsCollection RootComponents { get; }
 
 		/// <summary>
@@ -50,6 +64,11 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 		public event EventHandler<BlazorWebViewInitializedEventArgs>? BlazorWebViewInitialized;
 
 		/// <inheritdoc />
+#if ANDROID
+		[System.Runtime.Versioning.SupportedOSPlatform("android23.0")]
+#elif IOS
+		[System.Runtime.Versioning.SupportedOSPlatform("ios11.0")]
+#endif
 		public virtual IFileProvider CreateFileProvider(string contentRootDir)
 		{
 			// Call into the platform-specific code to get that platform's asset file provider

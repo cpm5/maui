@@ -36,9 +36,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class CalendarRead : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSCalendarsUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -46,6 +48,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(EventPermission.CheckPermissionStatus(EKEntityType.Event));
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -60,9 +63,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class CalendarWrite : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSCalendarsUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -70,6 +75,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(EventPermission.CheckPermissionStatus(EKEntityType.Event));
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -84,9 +90,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class Reminders : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSRemindersUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -94,6 +102,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(EventPermission.CheckPermissionStatus(EKEntityType.Reminder));
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -108,9 +117,11 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class Sensors : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[] { "NSMotionUsageDescription" };
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -118,6 +129,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(GetSensorPermissionStatus());
 			}
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -139,6 +151,7 @@ namespace Microsoft.Maui.ApplicationModel
 
 				if (OperatingSystem.IsIOSVersionAtLeast(11, 0) || OperatingSystem.IsWatchOSVersionAtLeast(4, 0))
 				{
+#pragma warning disable CA1416 // https://github.com/xamarin/xamarin-macios/issues/14619
 					switch (CMMotionActivityManager.AuthorizationStatus)
 					{
 						case CMAuthorizationStatus.Authorized:
@@ -150,6 +163,7 @@ namespace Microsoft.Maui.ApplicationModel
 						case CMAuthorizationStatus.Restricted:
 							return PermissionStatus.Restricted;
 					}
+#pragma warning restore CA1416
 				}
 
 				return PermissionStatus.Unknown;
@@ -177,6 +191,7 @@ namespace Microsoft.Maui.ApplicationModel
 
 		public partial class LocationAlways : BasePlatformPermission
 		{
+			/// <inheritdoc/>
 			protected override Func<IEnumerable<string>> RequiredInfoPlistKeys =>
 				() => new string[]
 				{
@@ -184,6 +199,7 @@ namespace Microsoft.Maui.ApplicationModel
 					"NSLocationAlwaysUsageDescription"
 				};
 
+			/// <inheritdoc/>
 			public override Task<PermissionStatus> CheckStatusAsync()
 			{
 				EnsureDeclared();
@@ -191,6 +207,7 @@ namespace Microsoft.Maui.ApplicationModel
 				return Task.FromResult(LocationWhenInUse.GetLocationStatus(false));
 			}
 
+			/// <inheritdoc/>
 			public override async Task<PermissionStatus> RequestAsync()
 			{
 				EnsureDeclared();
@@ -201,7 +218,9 @@ namespace Microsoft.Maui.ApplicationModel
 
 				EnsureMainThread();
 
+#pragma warning disable CA1416 // https://github.com/xamarin/xamarin-macios/issues/14619
 				return await LocationWhenInUse.RequestLocationAsync(false, lm => lm.RequestAlwaysAuthorization());
+#pragma warning restore CA1416
 			}
 		}
 	}

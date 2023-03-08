@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Versioning;
 using Android.Content;
 using Android.Runtime;
 using Android.Webkit;
@@ -7,6 +8,7 @@ using AWebView = Android.Webkit.WebView;
 
 namespace Microsoft.AspNetCore.Components.WebView.Maui
 {
+	[SupportedOSPlatform("android23.0")]
 	internal class WebKitWebViewClient : WebViewClient
 	{
 		// Using an IP address means that WebView doesn't wait for any DNS resolution,
@@ -18,8 +20,9 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 
 		private readonly BlazorWebViewHandler? _webViewHandler;
 
-		public WebKitWebViewClient(BlazorWebViewHandler webViewHandler!!)
+		public WebKitWebViewClient(BlazorWebViewHandler webViewHandler)
 		{
+			ArgumentNullException.ThrowIfNull(webViewHandler);
 			_webViewHandler = webViewHandler;
 		}
 
@@ -31,7 +34,9 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 		}
 
 		public override bool ShouldOverrideUrlLoading(AWebView? view, IWebResourceRequest? request)
+#pragma warning disable CA1416 // TODO: base.ShouldOverrideUrlLoading(,) is supported from Android 24.0
 			=> ShouldOverrideUrlLoadingCore(request) || base.ShouldOverrideUrlLoading(view, request);
+#pragma warning restore CA1416
 
 		private bool ShouldOverrideUrlLoadingCore(IWebResourceRequest? request)
 		{
@@ -44,9 +49,11 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 			// so we know we can safely invoke the UrlLoading event.
 			var callbackArgs = UrlLoadingEventArgs.CreateWithDefaultLoadingStrategy(uri, AppOriginUri);
 			_webViewHandler.UrlLoading(callbackArgs);
+			_webViewHandler.Logger.NavigationEvent(uri, callbackArgs.UrlLoadingStrategy);
 
 			if (callbackArgs.UrlLoadingStrategy == UrlLoadingStrategy.OpenExternally)
 			{
+				_webViewHandler.Logger.LaunchExternalBrowser(uri);
 				try
 				{
 					var intent = Intent.ParseUri(uri.OriginalString, IntentUriType.Scheme);
@@ -79,6 +86,8 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 			var allowFallbackOnHostPage = AppOriginUri.IsBaseOfPage(requestUri);
 			requestUri = QueryStringHelper.RemovePossibleQueryString(requestUri);
 
+			_webViewHandler?.Logger.HandlingWebRequest(requestUri);
+
 			if (requestUri != null &&
 				_webViewHandler != null &&
 				_webViewHandler.WebviewManager != null &&
@@ -86,7 +95,13 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 			{
 				var contentType = headers["Content-Type"];
 
+				_webViewHandler?.Logger.ResponseContentBeingSent(requestUri, statusCode);
+
 				return new WebResourceResponse(contentType, "UTF-8", statusCode, statusMessage, headers, content);
+			}
+			else
+			{
+				_webViewHandler?.Logger.ReponseContentNotFound(requestUri ?? string.Empty);
 			}
 
 			return base.ShouldInterceptRequest(view, request);
@@ -106,6 +121,8 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 
 		private void RunBlazorStartupScripts(AWebView view)
 		{
+			_webViewHandler?.Logger.RunningBlazorStartupScripts();
+
 			// Confirm Blazor hasn't already initialized
 			view.EvaluateJavascript(@"
 				(function() { return typeof(window.__BlazorStarted); })();
@@ -166,6 +183,7 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 						", new JavaScriptValueCallback(_ =>
 						{
 							// Done; no more action required
+							_webViewHandler?.Logger.BlazorStartupScriptsFinished();
 						}));
 					}));
 			}));
@@ -184,8 +202,9 @@ namespace Microsoft.AspNetCore.Components.WebView.Maui
 		{
 			private readonly Action<Java.Lang.Object?> _callback;
 
-			public JavaScriptValueCallback(Action<Java.Lang.Object?> callback!!)
+			public JavaScriptValueCallback(Action<Java.Lang.Object?> callback)
 			{
+				ArgumentNullException.ThrowIfNull(callback);
 				_callback = callback;
 			}
 

@@ -1,18 +1,24 @@
-﻿using Microsoft.Maui.Handlers;
+#nullable disable
+using Microsoft.Maui.Handlers;
 
 namespace Microsoft.Maui.Controls
 {
-	/// <include file="../../../../docs/Microsoft.Maui.Controls/Label.xml" path="Type[@FullName='Microsoft.Maui.Controls.Label']/Docs" />
+	/// <include file="../../../../docs/Microsoft.Maui.Controls/Label.xml" path="Type[@FullName='Microsoft.Maui.Controls.Label']/Docs/*" />
 	public partial class Label
 	{
-		/// <include file="../../../../docs/Microsoft.Maui.Controls/Label.xml" path="//Member[@MemberName='ControlsLabelMapper']/Docs" />
 		public static IPropertyMapper<ILabel, LabelHandler> ControlsLabelMapper = new PropertyMapper<Label, LabelHandler>(LabelHandler.Mapper)
 		{
 			[nameof(TextType)] = MapTextType,
 			[nameof(Text)] = MapText,
 			[nameof(FormattedText)] = MapText,
 			[nameof(TextTransform)] = MapText,
-#if __IOS__
+#if WINDOWS
+			[PlatformConfiguration.WindowsSpecific.InputView.DetectReadingOrderFromContentProperty.PropertyName] = MapDetectReadingOrderFromContent,
+#endif
+#if ANDROID
+			[nameof(TextColor)] = MapTextColor,
+#endif
+#if IOS
 			[nameof(TextDecorations)] = MapTextDecorations,
 			[nameof(CharacterSpacing)] = MapCharacterSpacing,
 			[nameof(LineHeight)] = MapLineHeight,

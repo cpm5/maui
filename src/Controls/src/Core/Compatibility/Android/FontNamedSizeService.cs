@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using Android.Content.Res;
 using Android.Util;
@@ -62,7 +63,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.Android
 					case NamedSize.Caption:
 						return 12;
 					case NamedSize.Header:
-						return 96;
+						return 14;
 					case NamedSize.Subtitle:
 						return 16;
 					case NamedSize.Title:
@@ -94,7 +95,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.Android
 				case NamedSize.Caption:
 					return 12;
 				case NamedSize.Header:
-					return 96;
+					return 14;
 				case NamedSize.Subtitle:
 					return 16;
 				case NamedSize.Title:

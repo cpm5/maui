@@ -1,8 +1,8 @@
 using System.ComponentModel;
+using Microsoft.Maui.Controls.Platform;
 using Microsoft.Maui.Graphics;
 using Microsoft.UI.Xaml;
 using WBrush = Microsoft.UI.Xaml.Media.Brush;
-using Microsoft.Maui.Controls.Platform;
 
 namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 {
@@ -69,7 +69,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 			{
 				UpdateFlowDirection();
 			}
-			else if(e.PropertyName == CheckBox.ColorProperty.PropertyName)
+			else if (e.PropertyName == CheckBox.ColorProperty.PropertyName)
 			{
 				UpdateTintColor();
 			}
@@ -97,7 +97,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 		{
 			BrushHelpers.UpdateColor(Element.Color, ref _tintDefaultBrush,
 				() => Control.TintBrush, brush => Control.TintBrush = brush);
-			
+
 		}
 	}
 }

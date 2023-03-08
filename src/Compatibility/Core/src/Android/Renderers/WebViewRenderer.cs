@@ -137,7 +137,9 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.Android
 			{
 				var webView = CreateNativeControl();
 #pragma warning disable 618 // This can probably be replaced with LinearLayout(LayoutParams.MatchParent, LayoutParams.MatchParent); just need to test that theory
+#pragma warning disable CA1416, CA1422 // Validate platform compatibility
 				webView.LayoutParameters = new global::Android.Widget.AbsoluteLayout.LayoutParams(LayoutParams.MatchParent, LayoutParams.MatchParent, 0, 0);
+#pragma warning restore CA1416, CA1422 // Validate platform compatibility
 #pragma warning restore 618
 
 				_webViewClient = GetWebViewClient();
@@ -393,6 +395,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.Android
 			ElementController.CanGoForward = Control.CanGoForward();
 		}
 
+		[PortHandler]
 		void UpdateMixedContentMode()
 		{
 			if (Control != null)
@@ -401,6 +404,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.Android
 			}
 		}
 
+		[PortHandler]
 		void UpdateEnableZoomControls()
 		{
 			var value = Element.OnThisPlatform().ZoomControlsEnabled();
@@ -408,6 +412,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.Android
 			Control.Settings.BuiltInZoomControls = value;
 		}
 
+		[PortHandler]
 		void UpdateDisplayZoomControls()
 		{
 			Control.Settings.DisplayZoomControls = Element.OnThisPlatform().ZoomControlsDisplayed();

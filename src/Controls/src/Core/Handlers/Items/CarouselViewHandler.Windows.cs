@@ -1,10 +1,11 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections;
 using System.Collections.Specialized;
+using Microsoft.Maui.Controls.Platform;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
-using Microsoft.Maui.Controls.Platform;
 using WApp = Microsoft.UI.Xaml.Application;
 using WDataTemplate = Microsoft.UI.Xaml.DataTemplate;
 using WScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility;
@@ -30,7 +31,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 		{
 			ItemsView.Scrolled -= CarouselScrolled;
 			ListViewBase.SizeChanged += InitialSetup;
-			
+
 			UpdateScrollBarVisibilityForLoop();
 
 			base.ConnectHandler(platformView);
@@ -196,7 +197,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 			handler.UpdatePeekAreaInsets();
 		}
 
-		public static void MapLoop(CarouselViewHandler handler, CarouselView carouselView) 
+		public static void MapLoop(CarouselViewHandler handler, CarouselView carouselView)
 		{
 			handler.UpdateLoop();
 		}

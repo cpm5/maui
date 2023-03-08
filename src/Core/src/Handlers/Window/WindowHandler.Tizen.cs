@@ -1,5 +1,5 @@
 using System;
-using ElmSharp;
+using Tizen.NUI;
 
 namespace Microsoft.Maui.Handlers
 {
@@ -11,16 +11,30 @@ namespace Microsoft.Maui.Handlers
 		{
 			_ = handler.MauiContext ?? throw new InvalidOperationException($"{nameof(MauiContext)} should have been set by base class.");
 
-			var nativeContent = window.Content.ToContainerView(handler.MauiContext);
+			var platformContent = window.Content.ToContainerView(handler.MauiContext);
 
-			nativeContent.SetAlignment(-1, -1);
-			nativeContent.SetWeight(1, 1);
-			nativeContent.Show();
-			handler.MauiContext.GetModalStack().Reset();
-			handler.MauiContext.GetModalStack().Push(nativeContent);
+			handler.MauiContext.GetPlatformWindow().SetContent(platformContent);
 
 			if (window.VisualDiagnosticsOverlay != null)
 				window.VisualDiagnosticsOverlay.Initialize();
+		}
+
+		public static void MapX(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateX(view);
+
+		public static void MapY(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateY(view);
+
+		public static void MapWidth(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateWidth(view);
+
+		public static void MapHeight(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateHeight(view);
+
+		public static void MapToolbar(IWindowHandler handler, IWindow view)
+		{
+			if (view is IToolbarElement tb)
+				ViewHandler.MapToolbar(handler, tb);
 		}
 
 		public static void MapRequestDisplayDensity(IWindowHandler handler, IWindow window, object? args)

@@ -1,7 +1,8 @@
+#nullable disable
 using System.Linq;
 using WBrush = Microsoft.UI.Xaml.Media.Brush;
-using WGradientStopCollection = Microsoft.UI.Xaml.Media.GradientStopCollection;
 using WGradientStop = Microsoft.UI.Xaml.Media.GradientStop;
+using WGradientStopCollection = Microsoft.UI.Xaml.Media.GradientStopCollection;
 using WLinearGradientBrush = Microsoft.UI.Xaml.Media.LinearGradientBrush;
 using WPoint = Windows.Foundation.Point;
 using WRadialGradientBrush = Microsoft.UI.Xaml.Media.RadialGradientBrush;
@@ -14,7 +15,7 @@ namespace Microsoft.Maui.Controls.Platform
 		{
 			if (brush == null)
 				return null;
-			
+
 			if (brush is SolidColorBrush solidColorBrush)
 			{
 				if (solidColorBrush.Color == null)

@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Maui.Devices;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.LifecycleEvents;
 
@@ -15,7 +14,7 @@ namespace Microsoft.Maui.Hosting
 	/// </summary>
 	public sealed class MauiAppBuilder
 	{
-		private readonly MauiApplicationServiceCollection _services = new();
+		private readonly ServiceCollection _services = new();
 		private Func<IServiceProvider>? _createServiceProvider;
 		private readonly Lazy<ConfigurationManager> _configuration;
 		private ILoggingBuilder? _logging;
@@ -38,6 +37,7 @@ namespace Microsoft.Maui.Hosting
 				this.ConfigureImageSources();
 				this.ConfigureAnimations();
 				this.ConfigureCrossPlatformLifecycleEvents();
+				this.ConfigureWindowEvents();
 				this.ConfigureDispatching();
 
 				this.UseEssentials();
@@ -53,26 +53,24 @@ namespace Microsoft.Maui.Hosting
 			public void Initialize(IServiceProvider services)
 			{
 #if WINDOWS
-				var dispatcher = 
-					services.GetService<IDispatcher>() ??
-					MauiWinUIApplication.Current.Services.GetRequiredService<IDispatcher>();
-
-				if (!dispatcher.IsDispatchRequired)
-					SetupResources();
+				// WORKAROUND: use the MAUI dispatcher instead of the OS dispatcher to
+				// avoid crashing: https://github.com/microsoft/WindowsAppSDK/issues/2451
+				var dispatcher = services.GetRequiredService<IDispatcher>();
+				if (dispatcher.IsDispatchRequired)
+					dispatcher.Dispatch(() => SetupResources());
 				else
-					dispatcher.Dispatch(SetupResources);
+					SetupResources();
 
-				void SetupResources()
+				static void SetupResources()
 				{
-					var dictionaries = UI.Xaml.Application.Current?.Resources?.MergedDictionaries;
-					if (UI.Xaml.Application.Current?.Resources != null && dictionaries != null)
-					{
-						// WinUI
-						UI.Xaml.Application.Current.Resources.AddLibraryResources<UI.Xaml.Controls.XamlControlsResources>();
+					if (UI.Xaml.Application.Current?.Resources is not UI.Xaml.ResourceDictionary resources)
+						return;
 
-						// Microsoft.Maui
-						UI.Xaml.Application.Current.Resources.AddLibraryResources("MicrosoftMauiCoreIncluded", "ms-appx:///Microsoft.Maui/Platform/Windows/Styles/Resources.xbf");
-					}
+					// WinUI
+					resources.AddLibraryResources<UI.Xaml.Controls.XamlControlsResources>();
+
+					// Microsoft.Maui
+					resources.AddLibraryResources("MicrosoftMauiCoreIncluded", "ms-appx:///Microsoft.Maui/Platform/Windows/Styles/Resources.xbf");
 				}
 #endif
 			}
@@ -155,7 +153,7 @@ namespace Microsoft.Maui.Hosting
 			MauiApp builtApplication = new MauiApp(serviceProvider);
 
 			// Mark the service collection as read-only to prevent future modifications
-			_services.IsReadOnly = true;
+			_services.MakeReadOnly();
 
 			var initServices = builtApplication.Services.GetServices<IMauiInitializeService>();
 			if (initServices != null)
@@ -199,7 +197,7 @@ namespace Microsoft.Maui.Hosting
 
 		private sealed class NullLogger<T> : ILogger<T>, IDisposable
 		{
-			public IDisposable BeginScope<TState>(TState state) => this;
+			public IDisposable BeginScope<TState>(TState state) where TState : notnull => this;
 
 			public void Dispose() { }
 

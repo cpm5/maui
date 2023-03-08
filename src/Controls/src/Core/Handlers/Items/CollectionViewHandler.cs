@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Maui.Handlers;
@@ -31,11 +32,18 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 			[StructuredItemsView.FooterTemplateProperty.PropertyName] = MapFooterTemplate,
 			[StructuredItemsView.ItemsLayoutProperty.PropertyName] = MapItemsLayout,
 			[StructuredItemsView.ItemSizingStrategyProperty.PropertyName] = MapItemSizingStrategy,
-			//[SelectableItemsView.SelectedItemProperty.PropertyName] = MapSelectedItem,
-			//[SelectableItemsView.SelectedItemsProperty.PropertyName] = MapSelectedItems,
-			//[SelectableItemsView.SelectionModeProperty.PropertyName] = MapSelectionMode,
-			//[GroupableItemsView.IsGroupedProperty.PropertyName] = MapIsGrouped
-			[ReorderableItemsView.IsGroupedProperty.PropertyName] = MapCanReorderItems
+			[SelectableItemsView.SelectedItemProperty.PropertyName] = MapSelectedItem,
+			[SelectableItemsView.SelectedItemsProperty.PropertyName] = MapSelectedItems,
+			[SelectableItemsView.SelectionModeProperty.PropertyName] = MapSelectionMode,
+			[GroupableItemsView.IsGroupedProperty.PropertyName] = MapIsGrouped,
+#if TIZEN
+			[StructuredItemsView.HeaderProperty.PropertyName] = MapHeader,
+			[StructuredItemsView.FooterProperty.PropertyName] = MapFooter,
+			[GroupableItemsView.GroupFooterTemplateProperty.PropertyName] = MapIsGrouped,
+			[GroupableItemsView.GroupHeaderTemplateProperty.PropertyName] = MapIsGrouped,
+#endif
+			[ReorderableItemsView.CanReorderItemsProperty.PropertyName] = MapCanReorderItems
+
 		};
 	}
 }

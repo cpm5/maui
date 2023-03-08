@@ -1,3 +1,4 @@
+#nullable disable
 using CoreGraphics;
 using Foundation;
 using ObjCRuntime;
@@ -7,7 +8,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 {
 	internal sealed class VerticalDefaultSupplementalView : DefaultCell
 	{
-		public static NSString ReuseId = new NSString("Microsoft.Maui.Controls.Compatibility.Platform.iOS.VerticalDefaultSupplementalView");
+		public static NSString ReuseId = new NSString("Microsoft.Maui.Controls.VerticalDefaultSupplementalView");
 
 		[Export("initWithFrame:")]
 		[Microsoft.Maui.Controls.Internals.Preserve(Conditional = true)]

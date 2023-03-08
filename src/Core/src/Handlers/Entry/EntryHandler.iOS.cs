@@ -1,6 +1,7 @@
 ﻿using System;
 using Foundation;
 using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Platform;
 using ObjCRuntime;
 using UIKit;
 
@@ -8,6 +9,8 @@ namespace Microsoft.Maui.Handlers
 {
 	public partial class EntryHandler : ViewHandler<IEntry, MauiTextField>
 	{
+		bool _set;
+
 		protected override MauiTextField CreatePlatformView() =>
 			new MauiTextField
 			{
@@ -15,12 +18,21 @@ namespace Microsoft.Maui.Handlers
 				ClipsToBounds = true
 			};
 
+		public override void SetVirtualView(IView view)
+		{
+			base.SetVirtualView(view);
+
+			if (!_set)
+				PlatformView.SelectionChanged += OnSelectionChanged;
+
+			_set = true;
+		}
+
 		protected override void ConnectHandler(MauiTextField platformView)
 		{
-			platformView.ShouldReturn = OnShouldReturn;
+			platformView.ShouldReturn += OnShouldReturn;
 			platformView.EditingDidBegin += OnEditingBegan;
 			platformView.EditingChanged += OnEditingChanged;
-			platformView.EditingDidBegin += OnEditingBegan;
 			platformView.EditingDidEnd += OnEditingEnded;
 			platformView.TextPropertySet += OnTextPropertySet;
 			platformView.ShouldChangeCharacters += OnShouldChangeCharacters;
@@ -28,12 +40,17 @@ namespace Microsoft.Maui.Handlers
 
 		protected override void DisconnectHandler(MauiTextField platformView)
 		{
+			platformView.ShouldReturn -= OnShouldReturn;
 			platformView.EditingDidBegin -= OnEditingBegan;
 			platformView.EditingChanged -= OnEditingChanged;
-			platformView.EditingDidBegin -= OnEditingBegan;
 			platformView.EditingDidEnd -= OnEditingEnded;
 			platformView.TextPropertySet -= OnTextPropertySet;
 			platformView.ShouldChangeCharacters -= OnShouldChangeCharacters;
+
+			if (_set)
+				platformView.SelectionChanged -= OnSelectionChanged;
+
+			_set = false;
 		}
 
 		public static void MapText(IEntryHandler handler, IEntry entry)
@@ -106,9 +123,7 @@ namespace Microsoft.Maui.Handlers
 
 		protected virtual bool OnShouldReturn(UITextField view)
 		{
-			view.ResignFirstResponder();
-
-			// TODO: Focus next View
+			KeyboardAutoManager.GoToNextResponderOrResign(view);
 
 			VirtualView?.Completed();
 
@@ -142,5 +157,17 @@ namespace Microsoft.Maui.Handlers
 
 		bool OnShouldChangeCharacters(UITextField textField, NSRange range, string replacementString) =>
 			VirtualView.TextWithinMaxLength(textField.Text, range, replacementString);
+
+		private void OnSelectionChanged(object? sender, EventArgs e)
+		{
+			var cursorPosition = PlatformView.GetCursorPosition();
+			var selectedTextLength = PlatformView.GetSelectedTextLength();
+
+			if (VirtualView.CursorPosition != cursorPosition)
+				VirtualView.CursorPosition = cursorPosition;
+
+			if (VirtualView.SelectionLength != selectedTextLength)
+				VirtualView.SelectionLength = selectedTextLength;
+		}
 	}
 }

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Concurrent;
+using System.IO;
 
 namespace Microsoft.Maui
 {
@@ -11,8 +11,15 @@ namespace Microsoft.Maui
 		readonly IFontRegistrar _fontRegistrar;
 		readonly IServiceProvider? _serviceProvider;
 
+		/// <inheritdoc/>
 		public double DefaultFontSize => 14; // 14sp
 
+		/// <summary>
+		/// Creates a new <see cref="EmbeddedFontLoader"/> instance.
+		/// </summary>
+		/// <param name="fontRegistrar">A <see cref="IFontRegistrar"/> instance to retrieve details from about registered fonts.</param>
+		/// <param name="serviceProvider">The applications <see cref="IServiceProvider"/>.
+		/// Typically this is provided through dependency injection.</param>
 		public FontManager(IFontRegistrar fontRegistrar, IServiceProvider? serviceProvider = null)
 		{
 			_fontRegistrar = fontRegistrar;
@@ -20,19 +27,23 @@ namespace Microsoft.Maui
 		}
 
 
+		/// <inheritdoc/>
 		public string GetFont(Font font)
 		{
-			var size = (float)font.Size;
+			var size = font.Size <= 0 || double.IsNaN(font.Size)
+				? (float)DefaultFontSize
+				: (float)font.Size;
 
 			return GetFont(font.Family, size, font.Slant, GetNativeFontFamily);
 		}
 
-		public string GetFontFamily(string? fontFamliy)
+		/// <inheritdoc/>
+		public string GetFontFamily(string? fontFamliy) //TODO: this is a misspelling in public ABI; consider changing in NET8
 		{
 			if (string.IsNullOrEmpty(fontFamliy))
 				return "";
 
-			var cleansedFont = CleanseFontName(fontFamliy??string.Empty);
+			var cleansedFont = CleanseFontName(fontFamliy ?? string.Empty);
 			if (cleansedFont == null)
 				return "";
 
@@ -40,8 +51,7 @@ namespace Microsoft.Maui
 			if (index != -1)
 			{
 				string font = cleansedFont.Substring(0, index);
-				string style = cleansedFont.Substring(index + 1);
-				return $"{font}:style={style}";
+				return $"{font}";
 			}
 			else
 			{
@@ -59,7 +69,7 @@ namespace Microsoft.Maui
 			if (string.IsNullOrEmpty(fontKey.family))
 				return "";
 
-			var cleansedFont = CleanseFontName(fontKey.family??string.Empty);
+			var cleansedFont = CleanseFontName(fontKey.family ?? string.Empty);
 
 			if (cleansedFont == null)
 				return "";
@@ -68,8 +78,7 @@ namespace Microsoft.Maui
 			if (index != -1)
 			{
 				string font = cleansedFont.Substring(0, index);
-				string style = cleansedFont.Substring(index + 1);
-				return $"{font}:style={style}";
+				return $"{font}";
 			}
 			else
 			{

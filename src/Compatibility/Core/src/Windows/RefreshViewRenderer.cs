@@ -1,15 +1,15 @@
 using System;
 using System.ComponentModel;
+using Microsoft.Maui.Controls.Platform;
+using Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;
+using Microsoft.Maui.Graphics;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 using Windows.UI.Core;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;
 using Specifics = Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific.RefreshView;
 using WBrush = Microsoft.UI.Xaml.Media.Brush;
-using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Controls.Platform;
 
 namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 {
@@ -146,7 +146,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 			if (!_isLoaded)
 				return;
 
-			if (!Element?.IsRefreshing??false)
+			if (!Element?.IsRefreshing ?? false)
 			{
 				CompleteRefresh();
 			}
@@ -168,6 +168,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.UWP
 			UpdateBackgroundColor();
 		}
 
+		[PortHandler]
 		void UpdateRefreshPullDirection()
 		{
 			if (Element.IsSet(Specifics.RefreshPullDirectionProperty))

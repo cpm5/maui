@@ -6,8 +6,8 @@ using PlatformView = Microsoft.Maui.Platform.MauiPageControl;
 #elif WINDOWS
 using PlatformView = Microsoft.Maui.Platform.MauiPageControl;
 #elif TIZEN
-using PlatformView = Tizen.UIExtensions.ElmSharp.IndicatorView;
-#elif NETSTANDARD || (NET6_0 && !IOS && !ANDROID && !TIZEN)
+using PlatformView = Microsoft.Maui.Platform.MauiPageControl;
+#elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformView = System.Object;
 #endif
 
@@ -16,7 +16,7 @@ namespace Microsoft.Maui.Handlers
 {
 	public partial class IndicatorViewHandler : IIndicatorViewHandler
 	{
-		public static PropertyMapper<IIndicatorView, IIndicatorViewHandler> Mapper = new(ViewMapper)
+		public static IPropertyMapper<IIndicatorView, IIndicatorViewHandler> Mapper = new PropertyMapper<IIndicatorView, IIndicatorViewHandler>(ViewMapper)
 		{
 			[nameof(IIndicatorView.Count)] = MapCount,
 			[nameof(IIndicatorView.Position)] = MapPosition,
@@ -28,7 +28,7 @@ namespace Microsoft.Maui.Handlers
 			[nameof(IIndicatorView.IndicatorsShape)] = MapIndicatorShape
 		};
 
-		public static CommandMapper<IActivityIndicator, IIndicatorViewHandler> CommandMapper = new(ViewCommandMapper)
+		public static CommandMapper<IIndicatorView, IIndicatorViewHandler> CommandMapper = new(ViewCommandMapper)
 		{
 		};
 
@@ -36,7 +36,13 @@ namespace Microsoft.Maui.Handlers
 		{
 		}
 
-		public IndicatorViewHandler(PropertyMapper mapper) : base(mapper ?? Mapper)
+		public IndicatorViewHandler(IPropertyMapper? mapper)
+			: base(mapper ?? Mapper, CommandMapper)
+		{
+		}
+
+		public IndicatorViewHandler(IPropertyMapper? mapper, CommandMapper? commandMapper)
+			: base(mapper ?? Mapper, commandMapper ?? CommandMapper)
 		{
 		}
 

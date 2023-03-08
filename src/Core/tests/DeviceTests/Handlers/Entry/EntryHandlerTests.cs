@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.DeviceTests.Stubs;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Handlers;
+using Microsoft.Maui.Hosting;
 using Xunit;
 
 namespace Microsoft.Maui.DeviceTests
 {
 	[Category(TestCategory.Entry)]
-	public partial class EntryHandlerTests : HandlerTestBase<EntryHandler, EntryStub>
+	public partial class EntryHandlerTests : CoreHandlerTestBase<EntryHandler, EntryStub>
 	{
 		[Fact(DisplayName = "Text Initializes Correctly")]
 		public async Task TextInitializesCorrectly()
@@ -100,8 +102,8 @@ namespace Microsoft.Maui.DeviceTests
 		}
 
 		[Theory(DisplayName = "TextColor Updates Correctly")]
-		[InlineData(0xFF0000, 0x0000FF)]
-		[InlineData(0x0000FF, 0xFF0000)]
+		[InlineData(0xFFFF0000, 0xFF0000FF)]
+		[InlineData(0xFF0000FF, 0xFFFF0000)]
 		public async Task TextColorUpdatesCorrectly(uint setValue, uint unsetValue)
 		{
 			var entry = new EntryStub();
@@ -263,10 +265,17 @@ namespace Microsoft.Maui.DeviceTests
 
 		[Theory(DisplayName = "Validates Text Keyboard")]
 		[InlineData(nameof(Keyboard.Chat), false)]
+#if WINDOWS
+		// The Text keyboard is the default one on Windows
+		[InlineData(nameof(Keyboard.Default), true)]
+		// Plain is the same as the Default keyboard on Windows
+		[InlineData(nameof(Keyboard.Plain), true)]
+#else
 		[InlineData(nameof(Keyboard.Default), false)]
+		[InlineData(nameof(Keyboard.Plain), false)]
+#endif
 		[InlineData(nameof(Keyboard.Email), false)]
 		[InlineData(nameof(Keyboard.Numeric), false)]
-		[InlineData(nameof(Keyboard.Plain), false)]
 		[InlineData(nameof(Keyboard.Telephone), false)]
 		[InlineData(nameof(Keyboard.Text), true)]
 		[InlineData(nameof(Keyboard.Url), false)]
@@ -297,7 +306,11 @@ namespace Microsoft.Maui.DeviceTests
 			await ValidatePropertyInitValue(entryStub, () => expected, GetNativeIsChatKeyboard, expected);
 		}
 
-		[Theory(DisplayName = "MaxLength Initializes Correctly")]
+		[Theory(DisplayName = "MaxLength Initializes Correctly"
+#if WINDOWS
+			, Skip = "https://github.com/dotnet/maui/issues/7939"
+#endif
+			)]
 		[InlineData(2)]
 		[InlineData(5)]
 		[InlineData(8)]
@@ -340,7 +353,11 @@ namespace Microsoft.Maui.DeviceTests
 			Assert.Equal(text, entry.Text);
 		}
 
-		[Theory(DisplayName = "MaxLength Clips Native Text Correctly")]
+		[Theory(DisplayName = "MaxLength Clips Native Text Correctly"
+#if WINDOWS
+			, Skip = "https://github.com/dotnet/maui/issues/7939"
+#endif
+		)]
 		[InlineData(2)]
 		[InlineData(5)]
 		[InlineData(8)]
@@ -478,124 +495,124 @@ namespace Microsoft.Maui.DeviceTests
 				() => entry.CharacterSpacing = newSize);
 		}
 
-		[Theory(DisplayName = "CursorPosition Initializes Correctly")]
-		[InlineData(0)]
-		public async Task CursorPositionInitializesCorrectly(int initialPosition)
+		[Theory(DisplayName = "Vertical TextAlignment Initializes Correctly")]
+		[InlineData(TextAlignment.Start)]
+		[InlineData(TextAlignment.Center)]
+		[InlineData(TextAlignment.End)]
+		public async Task VerticalTextAlignmentInitializesCorrectly(TextAlignment textAlignment)
 		{
 			var entry = new EntryStub
 			{
-				Text = "This is TEXT!",
-				CursorPosition = initialPosition
+				VerticalTextAlignment = textAlignment
 			};
 
-			await ValidatePropertyInitValue(entry, () => entry.CursorPosition, GetNativeCursorPosition, initialPosition);
+			var platformAlignment = GetNativeVerticalTextAlignment(textAlignment);
+
+			// attach for windows because it uses control templates
+			var values = await GetValueAsync(entry, (handler) =>
+				handler.PlatformView.AttachAndRun(() =>
+					new
+					{
+						ViewValue = entry.VerticalTextAlignment,
+						PlatformViewValue = GetNativeVerticalTextAlignment(handler)
+					}));
+
+			Assert.Equal(textAlignment, values.ViewValue);
+			Assert.Equal(platformAlignment, values.PlatformViewValue);
 		}
 
-		[Theory(DisplayName = "CursorPosition Updates Correctly")]
-		[InlineData(2, 5)]
-		public async Task CursorPositionUpdatesCorrectly(int setValue, int unsetValue)
+#if ANDROID
+		[Fact]
+		public async Task NextMovesToNextEntrySuccessfully()
 		{
-			string text = "This is TEXT!";
-
-			var entry = new EntryStub
+			EnsureHandlerCreated(builder =>
 			{
-				Text = text,
+				builder.ConfigureMauiHandlers(handler =>
+				{
+					handler.AddHandler<VerticalStackLayoutStub, LayoutHandler>();
+					handler.AddHandler<EntryStub, EntryHandler>();
+				});
+			});
+
+			var layout = new VerticalStackLayoutStub();
+
+			var entry1 = new EntryStub
+			{
+				Text = "Entry 1",
+				ReturnType = ReturnType.Next
 			};
 
-			await ValidatePropertyUpdatesValue(
-				entry,
-				nameof(IEntry.CursorPosition),
-				GetNativeCursorPosition,
-				setValue,
-				unsetValue
-			);
+			var entry2 = new EntryStub
+			{
+				Text = "Entry 2",
+				ReturnType = ReturnType.Next
+			};
+
+			layout.Add(entry1);
+			layout.Add(entry2);
+
+			layout.Width = 100;
+			layout.Height = 150;
+
+			await InvokeOnMainThreadAsync(async () =>
+			{
+				var contentViewHandler = CreateHandler<LayoutHandler>(layout);
+				await contentViewHandler.PlatformView.AttachAndRun(async () =>
+				{
+					await entry1.SendKeyboardReturnType(ReturnType.Next);
+					await entry2.WaitForFocused();
+					Assert.True(entry2.IsFocused);
+				});
+			});
 		}
 
-		[Theory(DisplayName = "CursorPosition is Capped to Text's Length")]
-		[InlineData(30)]
-		public async Task CursorPositionIsCapped(int initialPosition)
+		[Fact]
+		public async Task DoneClosesKeyboard()
 		{
-			string text = "This is TEXT!";
-
-			var entry = new EntryStub
+			EnsureHandlerCreated(builder =>
 			{
-				Text = text,
-				CursorPosition = initialPosition
+				builder.ConfigureMauiHandlers(handler =>
+				{
+					handler.AddHandler<VerticalStackLayoutStub, LayoutHandler>();
+					handler.AddHandler<EntryStub, EntryHandler>();
+				});
+			});
+
+			var layout = new VerticalStackLayoutStub();
+
+			var entry1 = new EntryStub
+			{
+				Text = "Entry 1",
+				ReturnType = ReturnType.Done
 			};
 
-			int actualPosition = await GetValueAsync(entry, GetNativeCursorPosition);
-
-			Assert.Equal(text.Length, actualPosition);
-		}
-
-		[Theory(DisplayName = "SelectionLength Initializes Correctly")]
-		[InlineData(0)]
-		public async Task SelectionLengthInitializesCorrectly(int initialLength)
-		{
-			var entry = new EntryStub
+			var entry2 = new EntryStub
 			{
-				Text = "This is TEXT!",
-				SelectionLength = initialLength
+				Text = "Entry 2",
+				ReturnType = ReturnType.Done
 			};
 
-			await ValidatePropertyInitValue(entry, () => entry.SelectionLength, GetPlatformSelectionLength, initialLength);
-		}
+			layout.Add(entry1);
+			layout.Add(entry2);
 
-		[Theory(DisplayName = "SelectionLength Updates Correctly")]
-		[InlineData(2, 5)]
-		public async Task SelectionLengthUpdatesCorrectly(int setValue, int unsetValue)
-		{
-			string text = "This is TEXT!";
+			layout.Width = 100;
+			layout.Height = 150;
 
-			var entry = new EntryStub
+			await InvokeOnMainThreadAsync(async () =>
 			{
-				Text = text,
-			};
-
-			await ValidatePropertyUpdatesValue(
-				entry,
-				nameof(IEntry.SelectionLength),
-				GetPlatformSelectionLength,
-				setValue,
-				unsetValue
-			);
+				var handler = CreateHandler<LayoutHandler>(layout);
+				await handler.PlatformView.AttachAndRun(async () =>
+				{
+					await entry1.SendKeyboardReturnType(ReturnType.Done);
+					await entry1.WaitForKeyboardToHide();
+				});
+			});
 		}
-
-		[Theory(DisplayName = "SelectionLength is Capped to Text Length")]
-		[InlineData(30)]
-		public async Task SelectionLengthIsCapped(int selectionLength)
-		{
-			string text = "This is TEXT!";
-
-			var entry = new EntryStub
-			{
-				Text = text,
-				SelectionLength = selectionLength
-			};
-
-			var actualLength = await GetValueAsync(entry, GetPlatformSelectionLength);
-
-			Assert.Equal(text.Length, actualLength);
-		}
-
+#endif
 
 		[Category(TestCategory.Entry)]
-		public class EntryTextInputTests : TextInputHandlerTests<EntryHandler, EntryStub>
+		public class EntryTextStyleTests : TextStyleHandlerTests<EntryHandler, EntryStub>
 		{
-			protected override void SetNativeText(EntryHandler entryHandler, string text)
-			{
-				EntryHandlerTests.SetNativeText(entryHandler, text);
-			}
-			protected override int GetCursorStartPosition(EntryHandler entryHandler)
-			{
-				return EntryHandlerTests.GetCursorStartPosition(entryHandler);
-			}
-
-			protected override void UpdateCursorStartPosition(EntryHandler entryHandler, int position)
-			{
-				EntryHandlerTests.UpdateCursorStartPosition(entryHandler, position);
-			}
 		}
-
 	}
 }

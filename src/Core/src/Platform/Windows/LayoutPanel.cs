@@ -3,8 +3,8 @@ using System;
 using Microsoft.Maui.Graphics;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using WSize = global::Windows.Foundation.Size;
 using WRect = global::Windows.Foundation.Rect;
+using WSize = global::Windows.Foundation.Size;
 using WSolidColorBrush = Microsoft.UI.Xaml.Media.SolidColorBrush;
 
 namespace Microsoft.Maui.Platform
@@ -18,6 +18,9 @@ namespace Microsoft.Maui.Platform
 
 		public bool ClipsToBounds { get; set; }
 
+		// TODO: Possibly reconcile this code with ViewHandlerExtensions.MeasureVirtualView
+		// If you make changes here please review if those changes should also
+		// apply to ViewHandlerExtensions.MeasureVirtualView
 		protected override WSize MeasureOverride(WSize availableSize)
 		{
 			if (CrossPlatformMeasure == null)
@@ -36,6 +39,9 @@ namespace Microsoft.Maui.Platform
 			return new WSize(width, height);
 		}
 
+		// TODO: Possibly reconcile this code with ViewHandlerExtensions.LayoutVirtualView
+		// If you make changes here please review if those changes should also
+		// apply to ViewHandlerExtensions.LayoutVirtualView
 		protected override WSize ArrangeOverride(WSize finalSize)
 		{
 			if (CrossPlatformArrange == null)
@@ -65,7 +71,7 @@ namespace Microsoft.Maui.Platform
 			}
 		}
 
-		void MakeInputTransparent(Brush? background) 
+		void MakeInputTransparent(Brush? background)
 		{
 			Background = null;
 
@@ -82,7 +88,7 @@ namespace Microsoft.Maui.Platform
 			}
 		}
 
-		void MakeInputVisible(Brush? background) 
+		void MakeInputVisible(Brush? background)
 		{
 			// If we aren't input transparent, we don't need the background layer hack 
 			RemoveBackgroundLayer();

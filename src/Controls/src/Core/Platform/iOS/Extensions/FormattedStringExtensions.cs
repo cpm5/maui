@@ -1,4 +1,3 @@
-#nullable enable
 using Foundation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls.Internals;
@@ -26,8 +25,14 @@ namespace Microsoft.Maui.Controls.Platform
 				label.TextColor,
 				label.TextTransform);
 
-
-		public static NSAttributedString ToNSAttributedString(this FormattedString formattedString, IFontManager fontManager, double defaultLineHeight = 0d, TextAlignment defaultHorizontalAlignment = TextAlignment.Start, Font? defaultFont = null, Color? defaultColor = null, TextTransform defaultTextTransform = TextTransform.Default)
+		public static NSAttributedString ToNSAttributedString(
+			this FormattedString formattedString,
+			IFontManager fontManager,
+			double defaultLineHeight = 0d, // TODO: NET8 should be -1, but too late to change for net6
+			TextAlignment defaultHorizontalAlignment = TextAlignment.Start,
+			Font? defaultFont = null,
+			Color? defaultColor = null,
+			TextTransform defaultTextTransform = TextTransform.Default)
 		{
 			if (formattedString == null)
 				return new NSAttributedString(string.Empty);
@@ -45,8 +50,17 @@ namespace Microsoft.Maui.Controls.Platform
 			return attributed;
 		}
 
-		public static NSAttributedString ToNSAttributedString(this Span span, IFontManager fontManager, double defaultLineHeight = 0d, TextAlignment defaultHorizontalAlignment = TextAlignment.Start, Font? defaultFont = null, Color? defaultColor = null, TextTransform defaultTextTransform = TextTransform.Default)
+		public static NSAttributedString ToNSAttributedString(
+			this Span span,
+			IFontManager fontManager,
+			double defaultLineHeight = 0d, // TODO: NET8 should be -1, but too late to change for NET8
+			TextAlignment defaultHorizontalAlignment = TextAlignment.Start,
+			Font? defaultFont = null,
+			Color? defaultColor = null,
+			TextTransform defaultTextTransform = TextTransform.Default)
 		{
+			var defaultFontSize = defaultFont?.Size ?? fontManager.DefaultFontSize;
+
 			var transform = span.TextTransform != TextTransform.Default ? span.TextTransform : defaultTextTransform;
 
 			var text = TextTransformUtilites.GetTransformedText(span.Text, transform);
@@ -71,7 +85,7 @@ namespace Microsoft.Maui.Controls.Platform
 				_ => UITextAlignment.Left
 			};
 
-			var font = span.ToFont();
+			var font = span.ToFont(defaultFontSize);
 			if (font.IsDefault && defaultFont.HasValue)
 				font = defaultFont.Value;
 
@@ -110,6 +124,5 @@ namespace Microsoft.Maui.Controls.Platform
 
 			return attrString;
 		}
-
 	}
 }

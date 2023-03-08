@@ -26,6 +26,7 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.Android
 			}
 		}
 
+		[PortHandler]
 		public static ImeAction ToAndroidImeOptions(this PlatformConfiguration.AndroidSpecific.ImeFlags flags)
 		{
 			switch (flags)
@@ -45,7 +46,9 @@ namespace Microsoft.Maui.Controls.Compatibility.Platform.Android
 				case PlatformConfiguration.AndroidSpecific.ImeFlags.ImeMaskAction:
 					return ImeAction.ImeMaskAction;
 				case PlatformConfiguration.AndroidSpecific.ImeFlags.NoPersonalizedLearning:
+#pragma warning disable CA1416 // Introduced in API 26: https://developer.android.com/reference/android/view/inputmethod/EditorInfo#IME_FLAG_NO_PERSONALIZED_LEARNING
 					return (ImeAction)ImeFlags.NoPersonalizedLearning;
+#pragma warning restore CA1416
 				case PlatformConfiguration.AndroidSpecific.ImeFlags.NoExtractUi:
 					return (ImeAction)ImeFlags.NoExtractUi;
 				case PlatformConfiguration.AndroidSpecific.ImeFlags.NoAccessoryAction:
