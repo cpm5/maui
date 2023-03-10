@@ -42,7 +42,7 @@ namespace Microsoft.Maui.Platform
 			else
 			{
 				var q = Looper.MyLooper();
-				if (q != null)
+				if (q is not null)
 					new Handler(q).Post(RequestFocus);
 				else
 					MainThread.InvokeOnMainThreadAsync(RequestFocus);
@@ -58,7 +58,7 @@ namespace Microsoft.Maui.Platform
 
 			void Show()
 			{
-				using (var inputMethodManager = (InputMethodManager)inputView.Context.GetSystemService(Context.InputMethodService)!)
+				using (var inputMethodManager = inputView.Context.GetSystemService(Context.InputMethodService) as InputMethodManager)
 				{
 					// The zero value for the second parameter comes from 
 					// https://developer.android.com/reference/android/view/inputmethod/InputMethodManager#showSoftInput(android.view.View,%20int)
