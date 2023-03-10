@@ -58,7 +58,7 @@ namespace Microsoft.Maui.Controls
 			return this;
 		}
 
-		
+
 
 		internal void Apply(BindableObject target, SetterSpecificity specificity)
 		{
@@ -121,7 +121,7 @@ namespace Microsoft.Maui.Controls
 			if (_originalValues.TryGetValue(targetObject, out object defaultValue))
 			{
 				//FIXME: unapply no longer need specificity
-				var specificity = fromStyle ? new SetterSpecificity(100,0,0,0) : SetterSpecificity.VisualStateSetter;
+				var specificity = fromStyle ? new SetterSpecificity(100, 0, 0, 0) : SetterSpecificity.VisualStateSetter;
 				//reset default value, unapply bindings and dynamicResource
 				targetObject.SetValue(Property, defaultValue, specificity);
 				_originalValues.Remove(targetObject);
@@ -154,12 +154,12 @@ namespace Microsoft.Maui.Controls
 		//200: local style, inline css,
 		//300-n: VSM, n = max(99, distance between the RD and the target)
 		//300: !important (not implemented)
-		public int Style { get; } 
+		public int Style { get; }
 
 		//CSS Specificity, see https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity
 		public int Id { get; }
 		public int Class { get; }
-		public int Type { get;  }
+		public int Type { get; }
 
 		SetterSpecificity(int vsm, int manual, int dynamicresource, int style, int id, int @class, int type)
 		{
@@ -178,12 +178,18 @@ namespace Microsoft.Maui.Controls
 
 		public int CompareTo(SetterSpecificity other)
 		{
-			if (Vsm != other.Vsm) return Vsm.CompareTo(other.Vsm);
-			if (Manual != other.Manual) return Manual.CompareTo(other.Manual);
-			if (DynamicResource != other.DynamicResource) return DynamicResource.CompareTo(other.DynamicResource);
-			if (Style != other.Style) return Style.CompareTo(other.Style);
-			if (Id != other.Id) return Id.CompareTo(other.Id);
-			if (Class != other.Class) return Class.CompareTo(other.Class);
+			if (Vsm != other.Vsm)
+				return Vsm.CompareTo(other.Vsm);
+			if (Manual != other.Manual)
+				return Manual.CompareTo(other.Manual);
+			if (DynamicResource != other.DynamicResource)
+				return DynamicResource.CompareTo(other.DynamicResource);
+			if (Style != other.Style)
+				return Style.CompareTo(other.Style);
+			if (Id != other.Id)
+				return Id.CompareTo(other.Id);
+			if (Class != other.Class)
+				return Class.CompareTo(other.Class);
 			return Type.CompareTo(other.Type);
 		}
 	}

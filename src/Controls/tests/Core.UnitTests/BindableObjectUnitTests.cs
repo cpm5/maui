@@ -956,7 +956,7 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 		public void StyleValueIsOverridenByValue()
 		{
 			var label = new Label();
-			label.SetValue(Label.TextProperty, "Foo", new SetterSpecificity(100,0,0,0));
+			label.SetValue(Label.TextProperty, "Foo", new SetterSpecificity(100, 0, 0, 0));
 			Assert.Equal("Foo", label.Text);
 
 			label.SetValue(Label.TextProperty, "Bar");

@@ -248,7 +248,7 @@ namespace Microsoft.Maui.Controls
 				context.Attributes &= ~BindableContextAttributes.IsSetFromStyle;
 
 			context.Binding?.Unapply();
-			
+
 			BindingBase oldBinding = context.Binding;
 			context.Binding = binding ?? throw new ArgumentNullException(nameof(binding));
 
@@ -446,13 +446,13 @@ namespace Microsoft.Maui.Controls
 			//FIXME
 			var fromStyle = specificity.Style > 0;
 			if (fromStyle)
-				SetBackupStyleValue(property, value); 
+				SetBackupStyleValue(property, value);
 			if (fromStyle && !CanBeSetFromStyle(property))
 				return;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 			SetValueCore(property, value, SetValueFlags.ClearOneWayBindings | SetValueFlags.ClearDynamicResource,
-				(fromStyle ? SetValuePrivateFlags.FromStyle : SetValuePrivateFlags.ManuallySet), specificity );
+				(fromStyle ? SetValuePrivateFlags.FromStyle : SetValuePrivateFlags.ManuallySet), specificity);
 #pragma warning restore CS0618 // Type or member is obsolete
 		}
 
@@ -485,7 +485,7 @@ namespace Microsoft.Maui.Controls
 			//bool manuallySet = (privateAttributes & SetValuePrivateFlags.ManuallySet) != 0;
 			bool silent = (privateAttributes & SetValuePrivateFlags.Silent) != 0;
 			bool fromStyle = (privateAttributes & SetValuePrivateFlags.FromStyle) != 0;
-			bool converted = (privateAttributes & SetValuePrivateFlags.Converted) != 0;			
+			bool converted = (privateAttributes & SetValuePrivateFlags.Converted) != 0;
 
 			if (!converted && !property.TryConvert(ref value))
 			{
@@ -729,7 +729,7 @@ namespace Microsoft.Maui.Controls
 		internal enum SetValuePrivateFlags
 		{
 			None = 0,
-			[Obsolete("no longer in use")]CheckAccess = 1 << 0,
+			[Obsolete("no longer in use")] CheckAccess = 1 << 0,
 			Silent = 1 << 1,
 			[Obsolete("no longer in use")] ManuallySet = 1 << 2,
 			FromStyle = 1 << 3,

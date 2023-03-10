@@ -134,7 +134,7 @@ namespace Microsoft.Maui.Controls
 			//FIXME: compute specificity
 			var specificity = new SetterSpecificity(200, 0, 0, 0);
 			if (basedOn != null)
-				((IStyle)basedOn).Apply(bindable, new SetterSpecificity(specificity.Style-1,0,0,0));
+				((IStyle)basedOn).Apply(bindable, new SetterSpecificity(specificity.Style - 1, 0, 0, 0));
 
 			foreach (Setter setter in Setters)
 				setter.Apply(bindable, specificity);
